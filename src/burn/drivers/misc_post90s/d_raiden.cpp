@@ -628,16 +628,16 @@ static INT32 MemIndex()
 	RamZ80		= Next; Next += 0x000800;
 	
 	RamSpr		= Next; Next += 0x001000;
-	RamFg		= (UINT16 *)Next; Next += 0x000800;
-	RamBg		= (UINT16 *)Next; Next += 0x000800;
-	RamTxt		= (UINT16 *)Next; Next += 0x000800;
+	RamFg		= (UINT16 *)Next; Next += 0x000400 * sizeof(UINT16);
+	RamBg		= (UINT16 *)Next; Next += 0x000400 * sizeof(UINT16);
+	RamTxt		= (UINT16 *)Next; Next += 0x000400 * sizeof(UINT16);
 
 	RamPal		= Next; Next += 0x001000;
 	RamScroll	= Next; Next += 0x000008;
 
 	RamEnd		= Next;
 
-	RamCurPal	= (UINT16 *) Next; Next += 0x001000;
+	RamCurPal	= (UINT16 *) Next; Next += 0x000800 * sizeof(UINT16);
 	
 	MemEnd		= Next;
 	return 0;
@@ -821,7 +821,7 @@ static INT32 DrvInit()
 	Mem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex();	
 	
@@ -841,7 +841,7 @@ static INT32 DrvInit()
 	if (game_drv == GAME_RAIDENA || game_drv == GAME_RAIDENT) 
 		seibu_sound_decrypt();
 
-	UINT8 * tmp = (UINT8 *) malloc (0x80000);
+	UINT8 * tmp = (UINT8 *) BurnMalloc (0x80000);
 	if (tmp == 0) return 1;
 	
 	BurnLoadRom(tmp + 0x00000,  7, 1);
@@ -855,10 +855,7 @@ static INT32 DrvInit()
 	BurnLoadRom(tmp + 0x00000, 11, 1);
 	decode_gfx_2(RomGfx4, tmp);
 	
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 	
 	BurnLoadRom(MSM6295ROM, 12, 1);
 	
@@ -964,10 +961,7 @@ static INT32 DrvExit()
 	VezExit();
 	ZetExit();
 	
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 	
 	return 0;
 }
@@ -1527,10 +1521,11 @@ static INT32 DrvFrame()
 	
 	ZetOpen(0);
 	BurnTimerEndFrameYM3812(3579545 / 60);
-	BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
-	ZetClose();
-	if (pBurnSoundOut)
+	if (pBurnSoundOut) {
+		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
+	}
+	ZetClose();
 	
 	return 0;	
 }
@@ -1587,10 +1582,11 @@ static INT32 DrvFrameAlt()
 	
 	ZetOpen(0);
 	BurnTimerEndFrameYM3812(3579545 / 60);
-	BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
-	ZetClose();
-	if (pBurnSoundOut)
+	if (pBurnSoundOut) {
+		BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
+	}
+	ZetClose();
 	
 	return 0;	
 }

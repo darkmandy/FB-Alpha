@@ -23,7 +23,7 @@ static UINT8 *DrvVidRAM;
 static UINT8 *DrvZ80RAM;
 static UINT8 *DrvMcuRAM;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT16*DrvScroll;
@@ -101,7 +101,7 @@ STDINPUTINFO(Bballs)
 
 static struct BurnDIPInfo PushmanDIPList[]=
 {
-	{0x14, 0xff, 0xff, 0xdf, NULL			},
+	{0x14, 0xff, 0xff, 0xff, NULL			},
 	{0x15, 0xff, 0xff, 0xff, NULL			},
 
 	{0   , 0xfe, 0   ,    2, "Debug Mode (Cheat)"	},
@@ -125,8 +125,8 @@ static struct BurnDIPInfo PushmanDIPList[]=
 	{0x14, 0x01, 0x10, 0x10, "On"			},
 
 	{0   , 0xfe, 0   ,    2, "Service Mode"		},
-	{0x14, 0x01, 0x20, 0x00, "Off"			},
-	{0x14, 0x01, 0x20, 0x20, "On"			},
+	{0x14, 0x01, 0x20, 0x20, "Off"			},
+	{0x14, 0x01, 0x20, 0x00, "On"			},
 
 	{0   , 0xfe, 0   ,    8, "Coinage"		},
 	{0x15, 0x01, 0x07, 0x00, "5 Coins 1 Credits"	},
@@ -186,7 +186,7 @@ static struct BurnDIPInfo BballsDIPList[]=
 	{0x13, 0x01, 0x02, 0x02, "No"			},
 	{0x13, 0x01, 0x02, 0x00, "Yes"			},
 
-	{0   , 0xfe, 0   ,    0, "Service Mode"		},
+	{0   , 0xfe, 0   ,    3, "Service Mode"		},
 	{0x13, 0x01, 0xc0, 0xc0, "Off"			},
 	{0x13, 0x01, 0xc0, 0x40, "Inputs/Outputs"	},
 	{0x13, 0x01, 0xc0, 0x00, "Graphics"		},
@@ -404,9 +404,9 @@ static INT32 DrvDoReset()
 	ZetReset();
 	ZetClose();
 
-	m6805Open(0);
+//	m6805Open(0);
 	m68705Reset();
-	m6805Close();
+//	m6805Close();
 
 	BurnYM2203Reset();
 
@@ -427,7 +427,7 @@ static INT32 MemIndex()
 	DrvGfxROM0		= Next; Next += 0x020000;
 	DrvGfxROM1		= Next; Next += 0x080000;
 	DrvGfxROM2		= Next; Next += 0x080000;
-	DrvGfxROM3		= Next; Next += 0x008000;
+	DrvGfxROM3		= Next; Next += 0x010000;
 
 	DrvPalette		= (UINT32*)Next; Next += 0x0240 * sizeof(UINT32);
 
@@ -470,7 +470,7 @@ static INT32 DrvGfxDecode()
 	INT32 YOffs1[16] = { 0x000, 0x008, 0x010, 0x018, 0x020, 0x028, 0x030, 0x038,
 			   0x040, 0x048, 0x050, 0x058, 0x060, 0x068, 0x070, 0x078 };
 
-	UINT8 *tmp = (UINT8*)malloc(0x40000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x40000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -487,10 +487,7 @@ static INT32 DrvGfxDecode()
 
 	GfxDecode(0x0200, 4, 32, 32, Plane0, XOffs0, YOffs0, 0x800, tmp, DrvGfxROM2);
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -500,7 +497,7 @@ static INT32 DrvInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -555,14 +552,15 @@ static INT32 DrvInit()
 	ZetClose();
 
 	m6805Init(1, 0x1000);
-	m6805Open(0);
+//	m6805Open(0);
 	m6805MapMemory(DrvMcuRAM + 0x0000, 0x0010, 0x007f, M6805_RAM);
 	m6805MapMemory(DrvMcuROM + 0x0080, 0x0080, 0x0fff, M6805_ROM);
 	m6805SetWriteHandler(pushman_mcu_write);
 	m6805SetReadHandler(pushman_mcu_read);
-	m6805Close();
+//	m6805Close();
 
 	BurnYM2203Init(2, 2000000, &DrvIRQHandler, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnYM2203SetVolumeShift(1);
 	BurnTimerAttachZet(4000000);
 
 	GenericTilesInit();
@@ -580,10 +578,7 @@ static INT32 DrvExit()
 	ZetExit();
 	m6805Exit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	no_mcu = 0;
 
@@ -737,7 +732,7 @@ static INT32 DrvFrame()
 
 	SekOpen(0);
 	ZetOpen(0);
-	m6805Open(0);
+//	m6805Open(0);
 
 	INT32 nInterleave = 256;
 	INT32 nCyclesTotal[3] = { 8000000 / 60, 4000000 / 60, 4000000 / 60 };
@@ -758,6 +753,8 @@ static INT32 DrvFrame()
 		if (no_mcu == 0) {
 			nCyclesDone[1] += m6805Run(segment / 2);
 		}
+		
+		BurnTimerUpdate(i * (nCyclesTotal[1] / nInterleave));
 	}
 
 	if (pBurnSoundOut) {
@@ -765,7 +762,7 @@ static INT32 DrvFrame()
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 	}
 
-	m6805Close();
+//	m6805Close();
 	ZetClose();
 	SekClose();
 

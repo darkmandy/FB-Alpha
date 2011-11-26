@@ -215,7 +215,7 @@ static INT32 DrvGfxROMDecode()
 	static INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
 				 0x100, 0x120, 0x140, 0x160, 0x180, 0x1a0, 0x1c0, 0x1e0 };
 
-	UINT8 *tmp = (UINT8*)malloc(0x600000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x600000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -238,12 +238,9 @@ static INT32 DrvGfxROMDecode()
 		GfxDecode(0x08000, 6, 16, 16, Planes, XOffs, YOffs, 0x200, tmp, DrvGfxROM + 0x0800000 * i);
 	}
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
-	DrvTransTab = (UINT8*)malloc(0x20000);
+	DrvTransTab = (UINT8*)BurnMalloc(0x20000);
 	if (DrvTransTab == NULL) {
 		return 1;
 	}	
@@ -324,7 +321,7 @@ static INT32 DrvInit()
 {
 	INT32 nLen;
 
-	DrvGfxROM = (UINT8*)malloc(0x2000000);
+	DrvGfxROM = (UINT8*)BurnMalloc(0x2000000);
 	if (DrvGfxROM == NULL) {
 		return 1;
 	}
@@ -333,7 +330,7 @@ static INT32 DrvInit()
 
 	MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -385,20 +382,9 @@ static INT32 DrvExit()
 
 	GenericTilesExit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
-
-	if (DrvGfxROM) {
-		free (DrvGfxROM);
-		DrvGfxROM = NULL;
-	}
-
-	if (DrvTransTab) {
-		free (DrvTransTab);
-		DrvTransTab = NULL;
-	}
+	BurnFree (AllMem);
+	BurnFree (DrvGfxROM);
+	BurnFree (DrvTransTab);
 
 	DrvRecalc = 0;
 

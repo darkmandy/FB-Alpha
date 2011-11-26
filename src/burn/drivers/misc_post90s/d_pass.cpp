@@ -19,7 +19,7 @@ static UINT8 *DrvGfxROM1;
 static UINT8 *DrvPalRAM;
 static UINT8 *DrvBgVRAM;
 static UINT8 *DrvFgVRAM;
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 
 static UINT8 DrvRecalc;
 
@@ -226,7 +226,7 @@ static INT32 DrvInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -273,6 +273,7 @@ static INT32 DrvInit()
 	ZetClose();
 
 	BurnYM2203Init(1, 3579545, NULL, DrvSynchroniseStream, DrvGetTime, 0);
+	BurnTimerAttachZet(3579545);
 
 	MSM6295Init(0, 792000 / 132, 100.0, 1);
 
@@ -292,10 +293,7 @@ static INT32 DrvExit()
 	SekExit();
 	ZetExit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	MSM6295ROM = NULL;
 
@@ -427,14 +425,15 @@ static INT32 DrvFrame()
 	for (INT32 i = 0; i < nInterleave; i++)
 	{
 		nSegment = (nTotalCycles[0] - nCyclesDone[0]) / (nInterleave - i);
-
 		nCyclesDone[0] += SekRun(nSegment);
 
-		nSegment = (nTotalCycles[1] - nCyclesDone[1]) / (nInterleave - i);
-
-		nCyclesDone[1] += ZetRun(nSegment);
+		nSegment = nTotalCycles[1] / nInterleave;
+		BurnTimerUpdate(i * nSegment);
 	}
 
+	ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
+	BurnTimerEndFrame(nTotalCycles[1]);
+	
 	if (pBurnSoundOut) {
 		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);

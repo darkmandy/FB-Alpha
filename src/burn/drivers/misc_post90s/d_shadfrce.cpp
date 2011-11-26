@@ -252,16 +252,16 @@ static INT32 MemIndex()
 	MSM6295ROM	= Next; Next += 0x080000;
 	
 	RamStart	= Next;
-	RamBg00		= (UINT16 *) Next; Next += 0x002000;
-	RamBg01		= (UINT16 *) Next; Next += 0x002000;
-	RamFg		= (UINT16 *) Next; Next += 0x002000;
-	RamSpr		= (UINT16 *) Next; Next += 0x002000;
-	RamPal		= (UINT16 *) Next; Next += 0x008000;
+	RamBg00		= (UINT16 *) Next; Next += 0x001000 * sizeof(UINT16);
+	RamBg01		= (UINT16 *) Next; Next += 0x001000 * sizeof(UINT16);
+	RamFg		= (UINT16 *) Next; Next += 0x001000 * sizeof(UINT16);
+	RamSpr		= (UINT16 *) Next; Next += 0x001000 * sizeof(UINT16);
+	RamPal		= (UINT16 *) Next; Next += 0x004000 * sizeof(UINT16);
 	Ram68K		= Next; Next += 0x010000;
 	RamZ80		= Next; Next += 0x001800;
 	RamEnd		= Next;
 	
-	RamCurPal	= (UINT16 *) Next; Next += 0x008000;
+	RamCurPal	= (UINT16 *) Next; Next += 0x004000 * sizeof(UINT16);
 	RamPri		= Next; Next += 0x014000;			// 320x256 Priority Buffer
 	
 	MemEnd		= Next;
@@ -479,7 +479,7 @@ static INT32 loadDecodeGfx01()
 */	
 	UINT8 *buf = NULL;
 	
-	if ((buf = (UINT8*)malloc(0x20000)) == NULL) {
+	if ((buf = (UINT8*)BurnMalloc(0x20000)) == NULL) {
 	    return 1;
     }	
 	
@@ -507,10 +507,7 @@ static INT32 loadDecodeGfx01()
 		tmp += 24;
 	}
 	
-	if (buf) {
-		free(buf);
-		buf = NULL;
-	}
+	BurnFree(buf);
 	return 0;
 }
 
@@ -527,7 +524,7 @@ static INT32 loadDecodeGfx02()
 */	
 	UINT8 *buf = NULL;
 	
-	if ((buf = (UINT8*)malloc(0xA00000)) == NULL) {
+	if ((buf = (UINT8*)BurnMalloc(0xA00000)) == NULL) {
 	    return 1;
     }	
 	memset(buf, 0, 0xA00000);	
@@ -582,10 +579,7 @@ static INT32 loadDecodeGfx02()
 		tmp5 += 16;
 	}
 
-	if (buf) {
-		free(buf);
-		buf = NULL;
-	}
+	BurnFree(buf);
 	return 0;
 }
 
@@ -602,7 +596,7 @@ static INT32 loadDecodeGfx03()
 */	
 	UINT8 *buf = NULL;
 	
-	if ((buf = (UINT8*)malloc(0x300000)) == NULL) {
+	if ((buf = (UINT8*)BurnMalloc(0x300000)) == NULL) {
 	    return 1;
     }	
 	memset(buf, 0, 0x300000);	
@@ -637,10 +631,7 @@ static INT32 loadDecodeGfx03()
 		tmp3 += 32;
 	}
 	
-	if (buf) {
-		free(buf);
-		buf = NULL;
-	}
+	BurnFree(buf);
 	
 	return 0;
 }
@@ -652,7 +643,7 @@ static INT32 shadfrceInit()
 	Mem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex();	
 	
@@ -746,10 +737,7 @@ static INT32 shadfrceExit()
 	SekExit();
 	ZetExit();
 	
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 	
 	return 0;
 }

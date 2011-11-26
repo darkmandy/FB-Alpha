@@ -28,7 +28,7 @@ static UINT8 *DrvSprBuf;
 static UINT8 *DrvSprBuf2;
 static UINT8 *DrvPrtRAM;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 *soundlatch;
@@ -727,7 +727,7 @@ static INT32 DrvSpriteDecode()
 	INT32 XOffs[16] = { 7,6,5,4,3,2,1,0, 32*8+7, 32*8+6, 32*8+5, 32*8+4, 32*8+3, 32*8+2, 32*8+1, 32*8+0 };
 	INT32 YOffs[16] = { 15*16, 14*16, 13*16, 12*16, 11*16, 10*16, 9*16, 8*16,	7*16, 6*16, 5*16, 4*16, 3*16, 2*16, 1*16, 0*16};
 
-	UINT8 *tmp = (UINT8*)malloc(0x600000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x600000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -736,10 +736,7 @@ static INT32 DrvSpriteDecode()
 
 	GfxDecode(0x8000, 6, 16, 16, Plane, XOffs, YOffs, 0x200, tmp, DrvGfxROM3);
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -751,7 +748,7 @@ static INT32 RohgaInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -849,7 +846,7 @@ static INT32 WizdfireInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -948,7 +945,7 @@ static INT32 SchmeisrInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -1042,7 +1039,7 @@ static INT32 NitrobalInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -1155,10 +1152,7 @@ static INT32 DrvExit()
 
 	SekExit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	MSM6295ROM = NULL;
 
@@ -1641,7 +1635,7 @@ static INT32 DrvFrame()
 
 	{
 		deco16_prot_inputs = DrvInputs;
-		memset (DrvInputs, 0xff, 4 * sizeof(INT16)); 
+		memset (DrvInputs, 0xff, 4 * sizeof(UINT16)); 
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;

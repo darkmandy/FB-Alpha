@@ -220,7 +220,7 @@ static INT32 DrvGfxDecode()
 	INT32 YOffs1[16] = { 0*16, 1*16, 2*16, 3*16, 4*16, 5*16, 6*16, 7*16,
 	 		   8*16, 9*16,10*16,11*16,12*16,13*16,14*16,15*16 };
 
-	UINT8 *tmp = (UINT8*)malloc(0x200000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x200000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -233,10 +233,7 @@ static INT32 DrvGfxDecode()
 
 	GfxDecode(0x04000, 4, 16, 16, Plane, XOffs, YOffs1, 0x100, tmp, DrvGfxROM1);
 
-	if (tmp) {
-		free(tmp);
-		tmp = NULL;
-	}
+	BurnFree(tmp);
 
 	return 0;
 }
@@ -292,7 +289,7 @@ static INT32 DrvDoReset()
 
 static void pirates_decrypt_68k()
 {
-	UINT16 *buf = (UINT16 *)malloc(0x100000);
+	UINT16 *buf = (UINT16 *)BurnMalloc(0x100000);
  	UINT16 *rom = (UINT16 *)Drv68KROM;
 
 	memcpy (buf, rom, 0x100000);
@@ -311,15 +308,12 @@ static void pirates_decrypt_68k()
 		rom[i] = (vr<<8) | vl;
 	}
 
-    	if (buf) {
-			free (buf);
-			buf = NULL;
-		}
+    BurnFree (buf);
 }
 
 static void pirates_decrypt_p()
 {
-	UINT8 *buf = (UINT8*)malloc(0x200000);
+	UINT8 *buf = (UINT8*)BurnMalloc(0x200000);
 	UINT8 *rom = DrvGfxROM0;
 	memcpy (buf, rom, 0x200000);
 
@@ -332,15 +326,12 @@ static void pirates_decrypt_p()
 		rom[adr+3*(0x200000/4)] = BITSWAP08(buf[i+3*(0x200000/4)], 2,3,4,0,7,5,1,6);
 	}
 
-	if (buf) {
-		free (buf);
-		buf = NULL;
-	}
+	BurnFree (buf);
 }
 
 static void pirates_decrypt_s()
 {
-	UINT8 *buf = (UINT8*)malloc(0x200000);
+	UINT8 *buf = (UINT8*)BurnMalloc(0x200000);
 	UINT8 *rom = DrvGfxROM1;
 	memcpy (buf, rom, 0x200000);
 
@@ -353,15 +344,12 @@ static void pirates_decrypt_s()
 		rom[adr+3*(0x200000/4)] = BITSWAP08(buf[i+3*(0x200000/4)], 4,2,7,1,6,5,0,3);
 	}
 
-	if (buf) {
-		free (buf);
-		buf = NULL;
-	}
+	BurnFree (buf);
 }
 
 static void pirates_decrypt_oki()
 {
-	UINT8 *buf = (UINT8*)malloc(0x80000);
+	UINT8 *buf = (UINT8*)BurnMalloc(0x80000);
 	UINT8 *rom = DrvSndROM;
 	memcpy (buf, rom, 0x80000);
 
@@ -371,10 +359,7 @@ static void pirates_decrypt_oki()
 		rom[adr] = BITSWAP08(buf[i], 2,3,4,0,7,5,1,6);
 	}
 
-	if (buf) {
-		free (buf);
-		buf = NULL;
-	}
+	BurnFree (buf);
 }
 
 static INT32 DrvInit()
@@ -382,7 +367,7 @@ static INT32 DrvInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -444,10 +429,7 @@ static INT32 DrvExit()
 
 	MSM6295Exit(0);
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	MSM6295ROM = NULL;
 	is_genix = 0;

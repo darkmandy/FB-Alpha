@@ -707,13 +707,13 @@ static INT32 powerinsInit()
 	Mem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex();	
 
 	// load roms
 
-	tmp = (UINT8 *)malloc(0x200000);
+	tmp = (UINT8 *)BurnMalloc(0x200000);
 	if (tmp==0) return 1;
 
 	if ( game_drv == GAME_POWERINS ) {
@@ -788,10 +788,7 @@ static INT32 powerinsInit()
 
 	}
 
-	if (tmp) {
-		free(tmp);
-		tmp = NULL;
-	}
+	BurnFree(tmp);
 
 	{
 		SekInit(0, 0x68000);										// Allocate 68000
@@ -854,16 +851,17 @@ static INT32 powerinsInit()
 	
 	if (game_drv == GAME_POWERINS ) {
 		BurnYM2203Init(1, 12000000 / 8, &powerinsIRQHandler, powerinsSynchroniseStream, powerinsGetTime, 0);
+		BurnYM2203SetVolumeShift(2);
 		BurnTimerAttachZet(6000000);
 		BurnSetRefreshRate(56.0);
 		
-		MSM6295Init(0, 4000000 / 165, 80, 1);
-		MSM6295Init(1, 4000000 / 165, 80, 1);
+		MSM6295Init(0, 4000000 / 165, 40, 1);
+		MSM6295Init(1, 4000000 / 165, 40, 1);
 	}
 
 	if (game_drv == GAME_POWERINB ) {
-		MSM6295Init(0, 4000000 / 165, 80, 1);
-		MSM6295Init(1, 4000000 / 165, 80, 0);
+		MSM6295Init(0, 4000000 / 165, 40, 1);
+		MSM6295Init(1, 4000000 / 165, 40, 1);
 	}
 
 	GenericTilesInit();
@@ -889,10 +887,7 @@ static INT32 powerinsExit()
 		ZetExit();
 	}
 
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 	return 0;
 }
 
@@ -1013,7 +1008,6 @@ static void DrvDraw()
 static INT32 powerinsFrame()
 {
 	INT32 nInterleave = 200;
-	INT32 nSoundBufferPos = 0;
 	
 	if (DrvReset) DrvDoReset();
 	
@@ -1056,15 +1050,6 @@ static INT32 powerinsFrame()
 			nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
 		
 			BurnTimerUpdate(i * (nCyclesTotal[1] / nInterleave));
-		
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				BurnYM2203Update(pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
 		}
 
 		SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
@@ -1086,14 +1071,6 @@ static INT32 powerinsFrame()
 			if ((i & 180) == 0) {
 				ZetSetIRQLine(0, ZET_IRQSTATUS_AUTO);
 			}
-		
-			if (pBurnSoundOut) {
-				INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-				INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				nSoundBufferPos += nSegmentLength;
-			}
 		}
 
 		SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
@@ -1105,13 +1082,9 @@ static INT32 powerinsFrame()
 		BurnTimerEndFrame(nCyclesTotal[1]);
 	
 		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			if (nSegmentLength) {
-				BurnYM2203Update(pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
-			}
+			BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+			MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
+			MSM6295Render(1, pBurnSoundOut, nBurnSoundLen);
 		}
 		
 		ZetClose();
@@ -1121,12 +1094,9 @@ static INT32 powerinsFrame()
 		ZetRun(nCyclesTotal[1] - nCyclesDone[1]);
 	
 		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			if (nSegmentLength) {
-				MSM6295Render(1, pSoundBuf, nSegmentLength);
-				MSM6295Render(0, pSoundBuf, nSegmentLength);				
-			}
+			memset(pBurnSoundOut, 0, nBurnSoundLen * 2 * sizeof(INT16));
+			MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
+			MSM6295Render(1, pBurnSoundOut, nBurnSoundLen);				
 		}
 		
 		ZetClose();

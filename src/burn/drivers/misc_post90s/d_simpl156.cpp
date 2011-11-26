@@ -23,8 +23,8 @@ static UINT8 *DrvSysRAM;
 static UINT8 *DrvPalRAM;
 static UINT8 *DrvSprRAM;
 
-static UINT32  *DrvPalette;
-static UINT8  DrvRecalc;
+static UINT32 *DrvPalette;
+static UINT8 DrvRecalc;
 
 static UINT8 DrvJoy1[16];
 static UINT8 DrvJoy2[16];
@@ -333,7 +333,7 @@ static INT32 MemIndex()
 
 static void decode_samples()
 {
-	UINT8 *tmp = (UINT8*)malloc(0x200000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x200000);
 
 	for (INT32 i = 0; i < 0x200000; i++) {
 		tmp[((i & 1) << 20) | (i >> 1)] = DrvSndROM1[i];
@@ -341,10 +341,7 @@ static void decode_samples()
 
 	memcpy (DrvSndROM1, tmp, 0x200000);
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 }
 
 static void pCommonSpeedhackCallback()
@@ -360,7 +357,7 @@ static INT32 CommonInit(INT32 (*pRomLoad)(INT32 *, INT32 *), void (*pMap)(), INT
 
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -418,10 +415,7 @@ static INT32 DrvExit()
 
 	deco16Exit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	return 0;
 }
@@ -557,7 +551,7 @@ static INT32 DrvFrame()
 	ArmClose();
 
 	if (pBurnSoundOut) {
-		memset (pBurnSoundOut, 0, nBurnSoundLen * sizeof(INT16)/* * 2*/);
+		memset (pBurnSoundOut, 0, nBurnSoundLen * sizeof(INT16) * 2);
 		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(1, pBurnSoundOut, nBurnSoundLen);
 	}
@@ -679,13 +673,37 @@ static struct BurnRomInfo joemacraRomDesc[] = {
 STD_ROM_PICK(joemacra)
 STD_ROM_FN(joemacra)
 
+static INT32 joemacraLoadCallback(INT32 *gfxlen0, INT32 *gfxlen1)
+{
+	if (BurnLoadRom(DrvArmROM  + 0x000000,  0, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM0 + 0x000000,  1, 1)) return 1;
+
+	if (BurnLoadRom(DrvGfxROM2 + 0x000001,  2, 2)) return 1;
+	if (BurnLoadRom(DrvGfxROM2 + 0x000000,  3, 2)) return 1;
+
+	if (BurnLoadRom(DrvSndROM0 + 0x000000,  4, 1)) return 1;
+
+	if (BurnLoadRom(DrvSndROM1 + 0x000000,  5, 1)) return 1;
+
+	*gfxlen0 = 0x100000;
+	*gfxlen1 = 0x200000;
+
+	return 0;
+}
+
+static INT32 joemacraInit()
+{
+	return CommonInit(joemacraLoadCallback, joemacr_map, 1, 0x0284);
+}
+
 struct BurnDriver BurnDrvJoemacra = {
 	"joemacra", "joemacr", NULL, NULL, "1994",
 	"Joe & Mac Returns (World, Version 1.0, 1994.05.19)\0", NULL, "Data East", "Simple 156",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_PLATFORM, 0,
 	NULL, joemacraRomInfo, joemacraRomName, NULL, NULL, Simpl156InputInfo, Simpl156DIPInfo,
-	joemacrInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
+	joemacraInit, DrvExit, DrvFrame, DrvDraw, DrvScan, &DrvRecalc, 0x400,
 	320, 240, 4, 3
 };
 
