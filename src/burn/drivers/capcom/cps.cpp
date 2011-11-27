@@ -414,25 +414,51 @@ INT32 CpsLoadTilesByte(UINT8* Tile, INT32 nStart)
 	return 0;
 }
 
-INT32 CpsLoadTilesForgottnAlt(UINT8* Tile, INT32 nStart)
+INT32 CpsLoadTilesForgottn(INT32 nStart)
 {
-	CpsLoadOne(Tile + 0 + 0x000000, nStart +  0, 0, 0);
-	CpsLoadOne(Tile + 0 + 0x000000, nStart +  1, 0, 1);
-	CpsLoadOne(Tile + 0 + 0x000000, nStart +  2, 1, 2);
-	CpsLoadOne(Tile + 4 + 0x000000, nStart +  3, 1, 0);
-	CpsLoadOne(Tile + 4 + 0x000000, nStart +  4, 0, 2);
-	CpsLoadOne(Tile + 4 + 0x000000, nStart +  5, 0, 3);
-	CpsLoadOne(Tile + 0 + 0x100000, nStart +  6, 0, 0);
-	CpsLoadOne(Tile + 0 + 0x100000, nStart +  7, 0, 1);
-	CpsLoadOne(Tile + 4 + 0x100000, nStart +  8, 0, 2);
-	CpsLoadOne(Tile + 4 + 0x100000, nStart +  9, 0, 3);
-	CpsLoadOne(Tile + 0 + 0x200000, nStart + 10, 1, 0);
-	CpsLoadOne(Tile + 0 + 0x200000, nStart + 11, 0, 2);
-	CpsLoadOne(Tile + 0 + 0x200000, nStart + 12, 0, 3);
-	CpsLoadOne(Tile + 4 + 0x200000, nStart + 13, 1, 0);
-	CpsLoadOne(Tile + 4 + 0x200000, nStart + 14, 1, 2);
-	CpsLoadOne(Tile + 0 + 0x300000, nStart + 15, 0, 2);
-	CpsLoadOne(Tile + 0 + 0x300000, nStart + 16, 0, 3);
+	CpsLoadOne(CpsGfx + 0 + 0x000000, nStart +  0, 0, 0);
+	CpsLoadOne(CpsGfx + 0 + 0x000000, nStart +  1, 0, 1);
+	CpsLoadOne(CpsGfx + 0 + 0x000000, nStart +  2, 1, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x000000, nStart +  3, 1, 0);
+	CpsLoadOne(CpsGfx + 4 + 0x000000, nStart +  4, 0, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x000000, nStart +  5, 0, 3);
+	CpsLoadOne(CpsGfx + 0 + 0x100000, nStart +  6, 0, 0);
+	CpsLoadOne(CpsGfx + 0 + 0x100000, nStart +  7, 0, 1);
+	CpsLoadOne(CpsGfx + 4 + 0x100000, nStart +  8, 0, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x100000, nStart +  9, 0, 3);
+	CpsLoadOne(CpsGfx + 0 + 0x200000, nStart + 10, 1, 0);
+	CpsLoadOne(CpsGfx + 0 + 0x200000, nStart + 11, 0, 2);
+	CpsLoadOne(CpsGfx + 0 + 0x200000, nStart + 12, 0, 3);
+	CpsLoadOne(CpsGfx + 4 + 0x200000, nStart + 13, 1, 0);
+	CpsLoadOne(CpsGfx + 4 + 0x200000, nStart + 14, 0, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x200000, nStart + 15, 0, 3);
+	CpsLoadOne(CpsGfx + 0 + 0x300000, nStart + 16, 0, 2);
+	CpsLoadOne(CpsGfx + 0 + 0x300000, nStart + 17, 0, 3);
+	CpsLoadOne(CpsGfx + 4 + 0x300000, nStart + 18, 0, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x300000, nStart + 19, 0, 3);
+	
+	return 0;
+}
+
+INT32 CpsLoadTilesForgottnu(INT32 nStart)
+{
+	CpsLoadOne(CpsGfx + 0 + 0x000000, nStart +  0, 0, 0);
+	CpsLoadOne(CpsGfx + 0 + 0x000000, nStart +  1, 0, 1);
+	CpsLoadOne(CpsGfx + 0 + 0x000000, nStart +  2, 1, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x000000, nStart +  3, 1, 0);
+	CpsLoadOne(CpsGfx + 4 + 0x000000, nStart +  4, 0, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x000000, nStart +  5, 0, 3);
+	CpsLoadOne(CpsGfx + 0 + 0x100000, nStart +  6, 0, 0);
+	CpsLoadOne(CpsGfx + 0 + 0x100000, nStart +  7, 0, 1);
+	CpsLoadOne(CpsGfx + 4 + 0x100000, nStart +  8, 0, 2);
+	CpsLoadOne(CpsGfx + 4 + 0x100000, nStart +  9, 0, 3);
+	CpsLoadOne(CpsGfx + 0 + 0x200000, nStart + 10, 1, 0);
+	CpsLoadOne(CpsGfx + 0 + 0x200000, nStart + 11, 0, 2);
+	CpsLoadOne(CpsGfx + 0 + 0x200000, nStart + 12, 0, 3);
+	CpsLoadOne(CpsGfx + 4 + 0x200000, nStart + 13, 1, 0);
+	CpsLoadOne(CpsGfx + 4 + 0x200000, nStart + 14, 1, 2);
+	CpsLoadOne(CpsGfx + 0 + 0x300000, nStart + 15, 0, 2);
+	CpsLoadOne(CpsGfx + 0 + 0x300000, nStart + 16, 0, 3);
 	
 	return 0;
 }

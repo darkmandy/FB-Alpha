@@ -9012,7 +9012,7 @@ static struct BurnRomInfo jjsquawkb2RomDesc[] = {
 	{ "u63.2l",		   0x100000, 0x7a385ef0, 0x03 | BRF_GRA },           //  3         // jj-rom7 + jj-rom8 from jjsquawk
 	
 	{ "u66.5l",		   0x100000, 0xbbaf40c5, 0x04 | BRF_GRA },           //  4 Layer 1 tiles // jj-rom11 + jj-rom12 from jjsquawk
-	{ "u65.4l",		   0x080000, 0x160646f6, 0x1c | BRF_GRA },           //  5               // jj-rom3.040         from jjsquawk
+	{ "u65.4l",		   0x080000, 0xa5a35caf, 0x1c | BRF_GRA },           //  5               // jj-rom3.040         from jjsquawk
 
 	{ "u68.7l",		   0x100000, 0xae9ae01f, 0x05 | BRF_GRA },           //  9 Layer 2 tiles // jj-rom14 + jj-rom13 from jjsquawk
 	{ "u67.6l",	           0x080000, 0xa235488e, 0x1d | BRF_GRA },	     // 10               // jj-rom4.040 from jjsquawk

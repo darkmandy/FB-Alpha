@@ -940,7 +940,11 @@ static struct BurnRomInfo neogeoRomDesc[] = {
 	{ "uni-bios_1_2o.rom", 0x20000, 0xe19d3ce9, BRF_ESS | BRF_PRG | BRF_BIOS | BRF_SELECT | BRF_OPT }, // 21 Universe BIOS ver. 1.2 (alt)
 	{ "uni-bios_1_1.rom",  0x20000, 0x5dda0d84, BRF_ESS | BRF_PRG | BRF_BIOS | BRF_SELECT | BRF_OPT }, // 22 Universe BIOS ver. 1.1
 	{ "uni-bios_1_0.rom",  0x20000, 0x0ce453a0, BRF_ESS | BRF_PRG | BRF_BIOS | BRF_SELECT | BRF_OPT }, // 23 Universe BIOS ver. 1.0
+#if !defined (ROM_VERIFY)
 	{ "neopen.sp1",        0x20000, 0xcb915e76, BRF_ESS | BRF_PRG | BRF_BIOS | BRF_SELECT | BRF_OPT }, // 24 NeoOpen BIOS v0.1 beta
+#else
+	{ "",                  0x00000, 0x00000000, 0                                                   }, // 24
+#endif
 	{ "",                  0x00000, 0x00000000, 0                                                   }, // 25 Trackball BIOS loaded here
 	{ "",                  0x00000, 0x00000000, 0                                                   }, // 26 PCB BIOS loaded here
 

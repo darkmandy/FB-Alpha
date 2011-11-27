@@ -799,7 +799,7 @@ INT32 BjFrame()
 	INT32 nSoundBufferPos = 0;
 
 	nCyclesTotal[0] = 4000000 / 60;
-	nCyclesTotal[1] = 3072000 / 60;
+	nCyclesTotal[1] = 3000000 / 60;
 	nCyclesDone[0] = nCyclesDone[1] = 0;
 
 	for (INT32 i = 0; i < nInterleave; i++) {
