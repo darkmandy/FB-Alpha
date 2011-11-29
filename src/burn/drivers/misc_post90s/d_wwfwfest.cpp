@@ -30,16 +30,16 @@ static UINT8 *DrvChars            = NULL;
 static UINT8 *DrvTiles            = NULL;
 static UINT8 *DrvSprites          = NULL;
 static UINT8 *DrvTempRom          = NULL;
-static UINT32 *DrvPalette          = NULL;
+static UINT32 *DrvPalette         = NULL;
 
 static UINT8 DrvVBlank;
 static UINT8 DrvOkiBank;
 static UINT8 DrvSoundLatch;
-static UINT16        DrvBg0ScrollX;
-static UINT16        DrvBg0ScrollY;
-static UINT16        DrvBg1ScrollX;
-static UINT16        DrvBg1ScrollY;
-static UINT16        DrvVReg;
+static UINT16 DrvBg0ScrollX;
+static UINT16 DrvBg0ScrollY;
+static UINT16 DrvBg1ScrollX;
+static UINT16 DrvBg1ScrollY;
+static UINT16 DrvVReg;
 
 static INT32 DrvSpriteXOffset;
 static INT32 DrvBg0XOffset;
@@ -505,8 +505,7 @@ void __fastcall Wwfwfest68KWriteWord(UINT32 a, UINT16 d)
 			DrvSoundLatch = d & 0xff;
 			ZetOpen(0);
 			ZetNmi();
-			ZetRun(100);
-			nCyclesDone[1] += 100;
+			nCyclesDone[1] += ZetRun(100);
 			ZetClose();
 			return;
 		}
@@ -619,17 +618,17 @@ static INT32 DrvInit()
 	INT32 nRet = 0, nLen, RomOffset;
 	
 	RomOffset = 0;
-	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "wwfwfstb")) RomOffset = 2;
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "wwfwfestb")) RomOffset = 2;
 
 	// Allocate and Blank all required memory
 	Mem = NULL;
 	MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	MemIndex();
 
-	DrvTempRom = (UINT8 *)malloc(0x800000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x800000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00000, 0, 2); if (nRet != 0) return 1;
@@ -644,7 +643,7 @@ static INT32 DrvInit()
 
 	// Load and decode the tiles
 	memset(DrvTempRom, 0, 0x800000);
-	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "wwfwfstb")) {
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "wwfwfestb")) {
 		nRet = BurnLoadRom(DrvTempRom + 0x040000, 4, 2); if (nRet != 0) return 1;
 		nRet = BurnLoadRom(DrvTempRom + 0x040001, 5, 2); if (nRet != 0) return 1;
 		nRet = BurnLoadRom(DrvTempRom + 0x000000, 6, 2); if (nRet != 0) return 1;
@@ -671,10 +670,7 @@ static INT32 DrvInit()
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 14 + RomOffset, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
@@ -716,7 +712,7 @@ static INT32 DrvInit()
 	DrvBg1XOffset[0] = 0;
 	DrvBg1XOffset[1] = 0;
 	
-	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "wwfwfstb")) {
+	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "wwfwfestb")) {
 		DrvSpriteXOffset = 2;
 		DrvBg0XOffset = -4;
 		DrvBg1XOffset[0] = -4;
@@ -755,10 +751,7 @@ static INT32 DrvExit()
 	DrvBg1XOffset[0] = 0;
 	DrvBg1XOffset[1] = 0;
 	
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 
 	return 0;
 }
@@ -1093,7 +1086,9 @@ static INT32 DrvFrame()
 		if (pBurnSoundOut) {
 			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
 			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			ZetOpen(0);
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
+			ZetClose();
 			MSM6295Render(0, pSoundBuf, nSegmentLength);
 			nSoundBufferPos += nSegmentLength;
 		}
@@ -1109,7 +1104,9 @@ static INT32 DrvFrame()
 		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
 
 		if (nSegmentLength) {
+			ZetOpen(0);
 			BurnYM2151Render(pSoundBuf, nSegmentLength);
+			ZetClose();
 			MSM6295Render(0, pSoundBuf, nSegmentLength);
 		}
 	}

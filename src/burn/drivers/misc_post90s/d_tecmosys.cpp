@@ -54,8 +54,8 @@ static UINT8 protection_value;
 
 static UINT16 *DrvTmpSprites;
 
-static UINT32  *DrvPalette;
-static UINT32  *DrvPalette24;
+static UINT32 *DrvPalette;
+static UINT32 *DrvPalette24;
 static UINT8 DrvRecalc;
 
 static UINT8 DrvJoy1[16];
@@ -584,16 +584,13 @@ static void expand_tiles(UINT8 *rom, INT32 len)
 	INT32 XOffs[16] = { 0x000, 0x004, 0x008, 0x00c, 0x010, 0x014, 0x018, 0x01c, 0x100, 0x104, 0x108, 0x10c, 0x110, 0x114, 0x118, 0x11c };
 	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0, 0x200, 0x220, 0x240, 0x260, 0x280, 0x2a0, 0x2c0, 0x2e0 };
 
-	UINT8 *tmp = (UINT8*)malloc(len);
+	UINT8 *tmp = (UINT8*)BurnMalloc(len);
 
 	memcpy (tmp, rom, len);
 
 	GfxDecode((len * 2) / (16 * 16), 4, 16, 16, Planes, XOffs, YOffs, 128*8, tmp, rom);
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 }
 
 static INT32 CommonInit(INT32 (*pRomLoadCallback)(), INT32 spritelen, INT32 sndlen, const struct prot_data *dev_data_pointer, INT32 game)
@@ -605,7 +602,7 @@ static INT32 CommonInit(INT32 (*pRomLoadCallback)(), INT32 spritelen, INT32 sndl
 	memset(AllMem, 0, nLen);
 	MemIndex(sndlen);
 
-	DrvSprROM = (UINT8*)malloc(spritelen);
+	DrvSprROM = (UINT8*)BurnMalloc(spritelen);
 	if (DrvSprROM == NULL) return 1;
 
 	if (pRomLoadCallback) {
@@ -696,15 +693,8 @@ static INT32 DrvExit()
 	YMZ280BROM = NULL;
 #endif
 
-	if (DrvSprROM) {
-		free (DrvSprROM);
-		DrvSprROM = NULL;
-	}
-
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (DrvSprROM);
+	BurnFree (AllMem);
 
 	return 0;
 }
@@ -1031,7 +1021,7 @@ static INT32 DrvFrame()
 	}
 
 	{
-		memset (DrvInputs, 0xff, 2 * sizeof(INT16));
+		memset (DrvInputs, 0xff, 2 * sizeof(UINT16));
 
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;

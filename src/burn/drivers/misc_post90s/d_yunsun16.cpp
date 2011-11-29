@@ -21,7 +21,7 @@ static UINT8 *DrvSprRAM;
 static UINT8 *DrvPalRAM;
 static UINT8 *DrvZ80RAM;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8  DrvRecalc;
 
 static INT32 soundbank;
@@ -355,9 +355,11 @@ void __fastcall magicbub_main_write_byte(UINT32 address, UINT8 data)
 		case 0x800188:
 		case 0x800189:
 			if (is_magicbub) {
-				*soundlatch = data;
-				//ZetNmi();
-				Z80SetIrqLine(Z80_INPUT_LINE_NMI, 1);
+				if (data != 0x3a) {
+					*soundlatch = data;
+//					ZetNmi();
+					Z80SetIrqLine(Z80_INPUT_LINE_NMI, 1);
+				}
 			} else {
 				MSM6295Command(0, data);
 			}
@@ -531,7 +533,7 @@ static INT32 DrvGfxDecode()
 	INT32 YOffs1[16] = { 0x000, 0x010, 0x020, 0x030, 0x040, 0x050, 0x060, 0x070,
 			   0x080, 0x090, 0x0a0, 0x0b0, 0x0c0, 0x0d0, 0x0e0, 0x0f0 };
 	
-	UINT8 *tmp = (UINT8*)malloc(0x400000);
+	UINT8 *tmp = (UINT8*)BurnMalloc(0x400000);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -546,10 +548,7 @@ static INT32 DrvGfxDecode()
 
 	GfxDecode(0x2000, 4, 16, 16, Plane1, XOffs1, YOffs1, 0x100, tmp, DrvGfxROM1);
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -559,7 +558,7 @@ static INT32 DrvInit(INT32 game_select)
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -685,10 +684,7 @@ static INT32 DrvExit()
 	SekExit();
 	GenericTilesExit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	is_magicbub = 0;
 
@@ -838,7 +834,7 @@ static INT32 DrvFrame()
 	ZetNewFrame();
 
 	{
-		memset (DrvInputs, 0xff, 4);
+		memset (DrvInputs, 0xff, 2 * sizeof(UINT16));
 
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= DrvJoy1[i] << i;
@@ -846,7 +842,6 @@ static INT32 DrvFrame()
 		}
 	}
 
-	INT32 nSoundBufferPos = 0;
 	INT32 nInterleave = 10;
 	INT32 nCyclesTotal[2] = { 16000000 / 60, 3000000 / 60 };
 	INT32 nCyclesDone[2] = { 0, 0 };
@@ -863,14 +858,6 @@ static INT32 DrvFrame()
 
 		nSegment = nCyclesTotal[1] / nInterleave;
 		BurnTimerUpdateYM3812((1 + i) * nSegment);
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM3812Update(pSoundBuf, nSegmentLength);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	if (is_magicbub) {
@@ -878,14 +865,10 @@ static INT32 DrvFrame()
 	}
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-		if (nSegmentLength) {
-			if (is_magicbub) {
-				BurnYM3812Update(pSoundBuf, nSegmentLength);
-			}
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
+		if (is_magicbub) {
+			BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 		}
+		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	ZetClose();

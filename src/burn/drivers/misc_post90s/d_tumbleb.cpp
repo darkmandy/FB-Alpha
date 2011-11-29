@@ -28,8 +28,8 @@ static UINT8 *DrvChars            = NULL;
 static UINT8 *DrvTiles            = NULL;
 static UINT8 *DrvSprites          = NULL;
 static UINT8 *DrvTempRom          = NULL;
-static UINT32 *DrvPalette          = NULL;
-static UINT16 *DrvControl          = NULL;
+static UINT32 *DrvPalette         = NULL;
+static UINT16 *DrvControl         = NULL;
 
 static UINT8 DrvVBlank;
 static UINT8 DrvOkiBank;
@@ -2115,10 +2115,8 @@ void __fastcall Jumppop68KWriteWord(UINT32 a, UINT16 d)
 		
 		case 0x18000c: {
 			DrvSoundLatch = d & 0xff;
-			bprintf(PRINT_NORMAL, _T("Latch Sent -> %02X\n"), DrvSoundLatch);
 			ZetOpen(0);
-			ZetRaiseIrq(0);
-			nCyclesDone[1] += ZetRun(100);
+			ZetSetIRQLine(0, ZET_IRQSTATUS_ACK);
 			ZetClose();
 			return;
 		}
@@ -2240,8 +2238,7 @@ UINT8 __fastcall JumppopZ80PortRead(UINT16 a)
 		}
 		
 		case 0x03: {
-			bprintf(PRINT_IMPORTANT, _T("Latch Read %02X\n"), DrvSoundLatch);
-			ZetLowerIrq();
+			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
 			return DrvSoundLatch;
 		}
 		
@@ -2284,10 +2281,14 @@ void __fastcall JumppopZ80PortWrite(UINT16 a, UINT8 d)
 		}
 		
 		case 0x05: {
-			//memory_set_bankptr(1, memory_region(REGION_CPU2) + 0x10000 + (0x4000 * data));
 			DrvZ80Bank = d;
 			ZetMapArea(0x8000, 0xbfff, 0, DrvZ80Rom + (DrvZ80Bank * 0x4000));
 			ZetMapArea(0x8000, 0xbfff, 2, DrvZ80Rom + (DrvZ80Bank * 0x4000));
+			return;
+		}
+		
+		case 0x06: {
+			// NOP
 			return;
 		}
 		
@@ -2340,7 +2341,7 @@ static INT32 TumblebLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x100000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2364,10 +2365,7 @@ static INT32 TumblebLoadRoms()
 	if (Tumbleb2) nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x80000, 6, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2376,7 +2374,7 @@ static INT32 JumpkidsLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x100000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2404,10 +2402,7 @@ static INT32 JumpkidsLoadRoms()
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 9, 1); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(MSM6295ROM + 0x00000, 10, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 
 	return 0;
 }
@@ -2416,7 +2411,7 @@ static INT32 MetlsavrLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x200000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x200000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2427,16 +2422,7 @@ static INT32 MetlsavrLoadRoms()
 	
 	// Load Shared RAM data
 	nRet = BurnLoadRom(DrvProtData, 3, 1); if (nRet) return 1;
-	UINT8 *pTemp = (UINT8*)malloc(0x200);
-	memcpy(pTemp, DrvProtData, 0x200);
-	for (INT32 i = 0; i < 0x200; i+=2) {
-		DrvProtData[i + 0] = pTemp[i + 1];
-		DrvProtData[i + 1] = pTemp[i + 0];
-	}
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnByteswap(DrvProtData, 0x200);
 	
 	// Load and decode the tiles
 	nRet = BurnLoadRom(DrvTempRom + 0x000001, 4, 2); if (nRet != 0) return 1;
@@ -2456,10 +2442,7 @@ static INT32 MetlsavrLoadRoms()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM, 10, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2468,7 +2451,7 @@ static INT32 PangpangLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x100000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2479,17 +2462,14 @@ static INT32 PangpangLoadRoms()
 	nRet = BurnLoadRom(DrvTempRom + 0x000001, 3, 2); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(DrvTempRom + 0x080000, 4, 2); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(DrvTempRom + 0x080001, 5, 2); if (nRet != 0) return 1;
-	UINT8 *pTemp = (UINT8*)malloc(0x100000);
+	UINT8 *pTemp = (UINT8*)BurnMalloc(0x100000);
 	memcpy(pTemp, DrvTempRom, 0x100000);
 	memset(DrvTempRom, 0, 0x100000);
 	memcpy(DrvTempRom + 0x000000, pTemp + 0x000000, 0x40000);
 	memcpy(DrvTempRom + 0x080000, pTemp + 0x040000, 0x40000);
 	memcpy(DrvTempRom + 0x040000, pTemp + 0x080000, 0x40000);
 	memcpy(DrvTempRom + 0x0c0000, pTemp + 0x0c0000, 0x40000);
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnFree(pTemp);
 	TumblebTilesRearrange();
 	GfxDecode(DrvNumChars, 4, 8, 8, SpritePlaneOffsets, CharXOffsets, CharYOffsets, 0x80, DrvTempRom, DrvChars);
 	GfxDecode(DrvNumTiles, 4, 16, 16, SpritePlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvTiles);
@@ -2506,10 +2486,7 @@ static INT32 PangpangLoadRoms()
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 10, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2517,7 +2494,7 @@ static INT32 PangpangLoadRoms()
 static void SuprtrioDecrypt68KRom()
 {
 	UINT16 *Rom = (UINT16*)Drv68KRom;
-	UINT16 *pTemp = (UINT16*)malloc(0x80000);
+	UINT16 *pTemp = (UINT16*)BurnMalloc(0x80000);
 	INT32 i;
 	
 	memcpy(pTemp, Rom, 0x80000);
@@ -2527,16 +2504,13 @@ static void SuprtrioDecrypt68KRom()
 		if ((i & 3) == 0) j ^= 0x08;
 		Rom[i] = pTemp[j];
 	}
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnFree(pTemp);
 }
 
 static void SuprtrioDecryptTiles()
 {
 	UINT16 *Rom = (UINT16*)DrvTempRom;
-	UINT16 *pTemp = (UINT16*)malloc(0x100000);
+	UINT16 *pTemp = (UINT16*)BurnMalloc(0x100000);
 	INT32 i;
 	
 	memcpy(pTemp, Rom, 0x100000);
@@ -2545,17 +2519,14 @@ static void SuprtrioDecryptTiles()
 		if (i & 1) j ^= 0x04;
 		Rom[i] = pTemp[j];
 	}
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnFree(pTemp);
 }
 
 static INT32 SuprtrioLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x100000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
 	
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2568,7 +2539,7 @@ static INT32 SuprtrioLoadRoms()
 	// Load and decode the tiles
 	nRet = BurnLoadRom(DrvTempRom + 0x000000, 3, 1); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(DrvTempRom + 0x080000, 4, 1); if (nRet != 0) return 1;
-	UINT8 *pTemp = (UINT8*)malloc(0x100000);
+	UINT8 *pTemp = (UINT8*)BurnMalloc(0x100000);
 	memcpy(pTemp, DrvTempRom, 0x100000);
 	memset(DrvTempRom, 0, 0x100000);
 	memcpy(DrvTempRom + 0x000000, pTemp + 0x000000, 0x20000);
@@ -2579,10 +2550,7 @@ static INT32 SuprtrioLoadRoms()
 	memcpy(DrvTempRom + 0x0c0000, pTemp + 0x0a0000, 0x20000);
 	memcpy(DrvTempRom + 0x0a0000, pTemp + 0x0c0000, 0x20000);
 	memcpy(DrvTempRom + 0x0e0000, pTemp + 0x0e0000, 0x20000);
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnFree(pTemp);
 	SuprtrioDecryptTiles();
 	GfxDecode(DrvNumTiles, 4, 16, 16, SuprtrioPlaneOffsets, SuprtrioXOffsets, SuprtrioYOffsets, 0x100, DrvTempRom, DrvTiles);
 	
@@ -2599,10 +2567,7 @@ static INT32 SuprtrioLoadRoms()
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x80000, 10, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2611,7 +2576,7 @@ static INT32 HtchctchLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x100000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2622,16 +2587,7 @@ static INT32 HtchctchLoadRoms()
 	
 	// Load Shared RAM data
 	nRet = BurnLoadRom(DrvProtData, 3, 1); if (nRet) return 1;
-	UINT8 *pTemp = (UINT8*)malloc(0x200);
-	memcpy(pTemp, DrvProtData, 0x200);
-	for (INT32 i = 0; i < 0x200; i+=2) {
-		DrvProtData[i + 0] = pTemp[i + 1];
-		DrvProtData[i + 1] = pTemp[i + 0];
-	}
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnByteswap(DrvProtData, 0x200);
 	
 	// Load and decode the tiles
 	nRet = BurnLoadRom(DrvTempRom + 0x000001, 4, 2); if (nRet != 0) return 1;
@@ -2651,10 +2607,7 @@ static INT32 HtchctchLoadRoms()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM, 10, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2663,7 +2616,7 @@ static INT32 ChokchokLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x200000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x200000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2674,31 +2627,19 @@ static INT32 ChokchokLoadRoms()
 	
 	// Load Shared RAM data
 	nRet = BurnLoadRom(DrvProtData, 3, 1); if (nRet) return 1;
-	UINT8 *pTemp = (UINT8*)malloc(0x200);
-	memcpy(pTemp, DrvProtData, 0x200);
-	for (INT32 i = 0; i < 0x200; i+=2) {
-		DrvProtData[i + 0] = pTemp[i + 1];
-		DrvProtData[i + 1] = pTemp[i + 0];
-	}
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnByteswap(DrvProtData, 0x200);
 	
 	// Load and decode the tiles
 	nRet = BurnLoadRom(DrvTempRom + 0x000001, 4, 2); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(DrvTempRom + 0x000000, 5, 2); if (nRet != 0) return 1;
-	pTemp = (UINT8*)malloc(0x100000);
+	UINT8 *pTemp = (UINT8*)BurnMalloc(0x100000);
 	memcpy(pTemp, DrvTempRom, 0x100000);
 	memset(DrvTempRom, 0, 0x200000);
 	memcpy(DrvTempRom + 0x000000, pTemp + 0x000000, 0x40000);
 	memcpy(DrvTempRom + 0x100000, pTemp + 0x040000, 0x40000);
 	memcpy(DrvTempRom + 0x040000, pTemp + 0x080000, 0x40000);
 	memcpy(DrvTempRom + 0x140000, pTemp + 0x0c0000, 0x40000);
-	if (pTemp) {
-		free(pTemp);
-		pTemp = NULL;
-	}
+	BurnFree(pTemp);
 	TumblebTilesRearrange();
 	GfxDecode(DrvNumChars, 4, 8, 8, Sprite2PlaneOffsets, CharXOffsets, CharYOffsets, 0x80, DrvTempRom, DrvChars);
 	GfxDecode(DrvNumTiles, 4, 16, 16, Sprite2PlaneOffsets, SpriteXOffsets, SpriteYOffsets, 0x200, DrvTempRom, DrvTiles);
@@ -2714,10 +2655,7 @@ static INT32 ChokchokLoadRoms()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM, 10, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2726,7 +2664,7 @@ static INT32 FncywldLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x100000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x100000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2752,10 +2690,7 @@ static INT32 FncywldLoadRoms()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM + 0x00000, 10, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2764,7 +2699,7 @@ static INT32 SdfightLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x400000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x400000);
 	
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(DrvTempRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2778,12 +2713,8 @@ static INT32 SdfightLoadRoms()
 	nRet = BurnLoadRom(DrvZ80Rom, 2, 1); if (nRet != 0) return 1;
 	
 	// Load Shared RAM data
-	memset(DrvTempRom, 0, 0x400000);
-	nRet = BurnLoadRom(DrvTempRom, 3, 1); if (nRet) return 1;
-	for (INT32 i = 0; i < 0x200; i+=2) {
-		DrvProtData[i + 0] = DrvTempRom[i + 1];
-		DrvProtData[i + 1] = DrvTempRom[i + 0];
-	}
+	nRet = BurnLoadRom(DrvProtData, 3, 1); if (nRet) return 1;
+	BurnByteswap(DrvProtData, 0x200);
 	
 	// Load and decode the tiles
 	memset(DrvTempRom, 0, 0x400000);
@@ -2818,10 +2749,7 @@ static INT32 SdfightLoadRoms()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM, 16, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -2830,7 +2758,7 @@ static INT32 BcstryLoadRoms()
 {
 	INT32 nRet = 0;
 	
-	DrvTempRom = (UINT8 *)malloc(0x400000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x400000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(DrvTempRom + 0x00001, 0, 2); if (nRet != 0) return 1;
@@ -2848,11 +2776,8 @@ static INT32 BcstryLoadRoms()
 	
 	// Load Shared RAM data
 	memset(DrvTempRom, 0, 0x400000);
-	nRet = BurnLoadRom(DrvTempRom, 3, 1); if (nRet) return 1;
-	for (INT32 i = 0; i < 0x200; i+=2) {
-		DrvProtData[i + 0] = DrvTempRom[i + 1];
-		DrvProtData[i + 1] = DrvTempRom[i + 0];
-	}
+	nRet = BurnLoadRom(DrvProtData, 3, 1); if (nRet) return 1;
+	BurnByteswap(DrvProtData, 0x200);
 	
 	// Load and decode the tiles
 	memset(DrvTempRom, 0, 0x400000);
@@ -2887,10 +2812,7 @@ static INT32 BcstryLoadRoms()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM, 16, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	return 0;
 }
@@ -3041,7 +2963,7 @@ static INT32 DrvInit(bool bReset, INT32 SpriteRamSize, INT32 SpriteMask, INT32 S
 	Mem = NULL;
 	MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	MemIndex();
 
@@ -3059,9 +2981,9 @@ static INT32 DrvInit(bool bReset, INT32 SpriteRamSize, INT32 SpriteMask, INT32 S
 	
 	// Setup the OKIM6295 emulation
 	if (DrvHasYM2151) {
-		MSM6295Init(0, OkiFreq / 132, 100.0, 1);
+		MSM6295Init(0, OkiFreq / 132, 20.0, 1);
 	} else {
-		MSM6295Init(0, OkiFreq / 132, 100.0, 0);
+		MSM6295Init(0, OkiFreq / 132, 20.0, 0);
 	}
 	
 	BurnSetRefreshRate(Refresh);
@@ -3437,11 +3359,11 @@ static INT32 JumppopInit()
 	Mem = NULL;
 	JumppopMemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	JumppopMemIndex();
 
-	DrvTempRom = (UINT8 *)malloc(0x200000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x200000);
 	
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x00000, 0, 1); if (nRet != 0) return 1;
@@ -3466,10 +3388,7 @@ static INT32 JumppopInit()
 	// Load Sample Roms
 	nRet = BurnLoadRom(MSM6295ROM, 6, 1); if (nRet != 0) return 1;
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
@@ -3578,10 +3497,7 @@ static INT32 DrvExit()
 	DrvMapZ80 = NULL;
 	DrvRender = NULL;
 	
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 
 	return 0;
 }
@@ -4439,7 +4355,7 @@ static INT32 DrvFrame()
 
 static INT32 JumppopFrame()
 {
-	INT32 nInterleave = 1953;
+	INT32 nInterleave = 1953 / 60;
 	
 	if (DrvReset) DrvDoReset();
 
@@ -4459,7 +4375,7 @@ static INT32 JumppopFrame()
 		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
 		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
 		nCyclesDone[nCurrentCPU] += SekRun(nCyclesSegment);
-		if (i == 1952) {
+		if (i == (nInterleave - 1)) {
 			SekSetIRQLine(6, SEK_IRQSTATUS_AUTO);
 		}
 		SekClose();
@@ -4467,16 +4383,13 @@ static INT32 JumppopFrame()
 		// Run Z80
 		nCurrentCPU = 1;
 		ZetOpen(0);
-		nNext = (i + 1) * nCyclesTotal[nCurrentCPU] / nInterleave;
-		nCyclesSegment = nNext - nCyclesDone[nCurrentCPU];
-		nCyclesSegment = ZetRun(nCyclesSegment);
-		nCyclesDone[nCurrentCPU] += nCyclesSegment;
+		BurnTimerUpdateYM3812(i * (nCyclesTotal[nCurrentCPU] / nInterleave));
 		ZetNmi();
 		ZetClose();
 	}
 	
 	ZetOpen(0);
-	BurnTimerEndFrameYM3812(nCyclesTotal[1] - nCyclesDone[1]);
+	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
 	BurnYM3812Update(pBurnSoundOut, nBurnSoundLen);
 	ZetClose();
 	MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);

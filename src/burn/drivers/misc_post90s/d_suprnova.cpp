@@ -33,7 +33,7 @@ static UINT8 *DrvTilesA8Bpp       = NULL;
 static UINT8 *DrvTilesB8Bpp       = NULL;
 static UINT8 *DrvTilesA4Bpp       = NULL;
 static UINT8 *DrvTilesB4Bpp       = NULL;
-static UINT32  *DrvPalette          = NULL;
+static UINT32 *DrvPalette          = NULL;
 
 static INT32 nCyclesDone[1], nCyclesTotal[1];
 static INT32 nCyclesSegment;
@@ -588,7 +588,7 @@ static INT32 CyvernInit()
 	Mem = NULL;
 	MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	MemIndex();
 
@@ -651,10 +651,7 @@ static INT32 DrvExit()
 	
 	GenericTilesExit();
 	
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 
 	return 0;
 }

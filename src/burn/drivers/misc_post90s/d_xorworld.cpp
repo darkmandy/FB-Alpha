@@ -15,7 +15,7 @@ static UINT8 *DrvColPROM;
 static UINT8 *DrvVidRAM;
 static UINT8 *DrvSprRAM;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 DrvJoy1[8];
@@ -201,10 +201,7 @@ static INT32 DrvGfxDecode()
 
 	GfxDecode((0x20000 * 2) / 0x40, 4, 8, 8, Plane, XOffs, YOffs, 0x080, tmp, DrvGfxROM);
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -290,10 +287,7 @@ static INT32 DrvExit()
 
 	saa1099Exit(0);
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	return 0;
 }
@@ -431,7 +425,7 @@ STD_ROM_FN(xorworld)
 
 struct BurnDriver BurnDrvXorworld = {
 	"xorworld", NULL, NULL, NULL, "1990",
-	"Xor World (prototype)\0", "No sound. Sound chip not emulated in FBA", "Gaelco", "Miscellaneous",
+	"Xor World (prototype)\0", NULL, "Gaelco", "Miscellaneous",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_PUZZLE, 0,
 	NULL, xorworldRomInfo, xorworldRomName, NULL, NULL, XorworldInputInfo, XorworldDIPInfo,

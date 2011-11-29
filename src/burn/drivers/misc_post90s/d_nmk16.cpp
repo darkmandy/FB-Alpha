@@ -1902,6 +1902,8 @@ void NMK112_init(UINT8 disable_page_mask, UINT8 *rgn0, UINT8 *rgn1, INT32 len0, 
 //------------------------------------------------------------------------------------------------------------
 // MCU simulation stuff
 
+static INT32 prot_count = 0;
+
 static UINT8 tharrier_mcu_r()
 {
 	UINT16 *nmk16_mainram = (UINT16*)Drv68KRAM;
@@ -1911,7 +1913,6 @@ static UINT8 tharrier_mcu_r()
 		0x82,0xc7,0x00,0x2c,0x6c,0x00,0x9f,0xc7,0x00,0x29,0x69,0x00,0x8b,0xc7,0x00
 	};
 
-	static INT32 prot_count;
 	INT32 res;
 
 	     if (SekGetPC(-1)==0x08aa) res = (nmk16_mainram[0x9064/2])|0x20;
@@ -2427,11 +2428,11 @@ UINT16 __fastcall ssmissin_main_read_word(UINT32 address)
 
 static void macross2_sound_sync()
 {
-	INT32 cycles = (SekTotalCycles() * 4) / 10;
+/*	INT32 cycles = (SekTotalCycles() * 4) / 10;
 
 	if (cycles > ZetTotalCycles() && cycles < 71429) {
 		BurnTimerUpdate(cycles);
-	}
+	}*/
 }
 
 UINT8 __fastcall macross2_main_read_byte(UINT32 address)
@@ -2524,10 +2525,10 @@ void __fastcall macross2_main_write_word(UINT32 address, UINT16 data)
 					ZetReset();
 				}
 			} else {
-				INT32 cycles = ((SekTotalCycles() * 4) / 10) - ZetTotalCycles();
-				if (cycles > 0 && cycles < 71429) {
-					ZetIdle(cycles);
-				}
+//				INT32 cycles = ((SekTotalCycles() * 4) / 10) - ZetTotalCycles();
+//				if (cycles > 0 && cycles < 71429) {
+//					ZetIdle(cycles);
+//				}
 			}
 
 			macross2_sound_enable = data;
@@ -3580,7 +3581,7 @@ UINT8 __fastcall tharrier_sound_in(UINT16 port)
 	{
 		case 0x00:
 		case 0x01:
-			return YM2203Read(0, 0);
+			return BurnYM2203Read(0, 0);
 	}
 
 	return 0;
@@ -3773,7 +3774,7 @@ UINT8 __fastcall macross2_sound_in(UINT16 port)
 	{
 		case 0x00:
 		case 0x01:
-			return YM2203Read(0, 0);
+			return BurnYM2203Read(0, 0);
 
 		case 0x80:
 			return MSM6295ReadStatus(0);
@@ -3871,6 +3872,7 @@ static INT32 DrvDoReset()
 	MSM6295SetInitialBanks(2);
 
 	macross2_sound_enable = -1;
+	prot_count = 0;
 
 	return 0;
 }
@@ -4026,7 +4028,7 @@ static INT32 DrvGfxDecode(INT32 len0, INT32 len1, INT32 len2)
 	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
 			  0x100, 0x120, 0x140, 0x160, 0x180, 0x1a0, 0x1c0, 0x1e0 };
 
-	UINT8 *tmp = (UINT8*)malloc((len2 >= len1) ? len2 : len1);
+	UINT8 *tmp = (UINT8*)BurnMalloc((len2 >= len1) ? len2 : len1);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -4047,10 +4049,7 @@ static INT32 DrvGfxDecode(INT32 len0, INT32 len1, INT32 len2)
 	nGraphicsMask[1] = ((len1 * 2) / (16 * 16)) - 1;
 	nGraphicsMask[2] = ((len2 * 2) / (16 * 16)) - 1;
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -4063,7 +4062,7 @@ static INT32 BjtwinGfxDecode(INT32 len0, INT32 len1, INT32 len2)
 	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
 			  0x100, 0x120, 0x140, 0x160, 0x180, 0x1a0, 0x1c0, 0x1e0 };
 
-	UINT8 *tmp = (UINT8*)malloc((len2 >= len1) ? len2 : len1);
+	UINT8 *tmp = (UINT8*)BurnMalloc((len2 >= len1) ? len2 : len1);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -4084,10 +4083,7 @@ static INT32 BjtwinGfxDecode(INT32 len0, INT32 len1, INT32 len2)
 	nGraphicsMask[1] = ((len1 * 2) / ( 8 *  8)) - 1;
 	nGraphicsMask[2] = ((len2 * 2) / (16 * 16)) - 1;
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -4100,7 +4096,7 @@ static INT32 GrdnstrmGfxDecode(INT32 len0, INT32 len1, INT32 len2)
 	INT32 YOffs[16] = { 0x000, 0x020, 0x040, 0x060, 0x080, 0x0a0, 0x0c0, 0x0e0,
 			  0x100, 0x120, 0x140, 0x160, 0x180, 0x1a0, 0x1c0, 0x1e0 };
 
-	UINT8 *tmp = (UINT8*)malloc((len2 >= len1) ? len2 : len1);
+	UINT8 *tmp = (UINT8*)BurnMalloc((len2 >= len1) ? len2 : len1);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -4122,10 +4118,7 @@ static INT32 GrdnstrmGfxDecode(INT32 len0, INT32 len1, INT32 len2)
 	nGraphicsMask[2] = ((len2 * 2) / (16 * 16)) - 1;
 	is_8bpp = 1;
 
-	if (tmp) {
-		free (tmp);
-		tmp = NULL;
-	}
+	BurnFree (tmp);
 
 	return 0;
 }
@@ -4135,7 +4128,7 @@ static INT32 DrvInit(INT32 (*pLoadCallback)())
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4177,7 +4170,7 @@ static INT32 BjtwinInit(INT32 (*pLoadCallback)())
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4217,7 +4210,7 @@ static INT32 Macross2Init()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4304,7 +4297,7 @@ static INT32 MSM6295x1Init(INT32  (*pLoadCallback)())
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4340,7 +4333,7 @@ static INT32 SeibuSoundInit(INT32 (*pLoadCallback)(), INT32 type)
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4389,7 +4382,7 @@ static INT32 AfegaInit(INT32 (*pLoadCallback)(), void (*pZ80Callback)(), INT32 p
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4422,8 +4415,8 @@ static INT32 AfegaInit(INT32 (*pLoadCallback)(), void (*pZ80Callback)(), INT32 p
 	BurnYM2151Init(4000000, 70.0);
 	BurnYM2151SetIrqHandler(&DrvYM2151IrqHandler);
 
-	MSM6295Init(0, 1000000 / (pin7high ? 132 : 165), 30.0, 1);
-	MSM6295Init(1, 1000000 / (pin7high ? 132 : 165), 30.0, 1);
+	MSM6295Init(0, 1000000 / (pin7high ? 132 : 165), 60.0, 1);
+	MSM6295Init(1, 1000000 / (pin7high ? 132 : 165), 60.0, 1);
 
 	GenericTilesInit();
 
@@ -4437,7 +4430,7 @@ static INT32 NMK004Init(INT32 (*pLoadCallback)(), INT32 nCpuSpeed, INT32 pin7hig
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -4476,10 +4469,7 @@ static INT32 CommonExit()
 
 	SekExit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	input_high[0] = input_high[1] = 0;
 	is_8bpp = 0;
@@ -4497,10 +4487,7 @@ static INT32 SeibuSoundExit()
 	seibu_sound_exit();
 	SekExit();
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	input_high[0] = input_high[1] = 0;
 	is_8bpp = 0;
@@ -5164,7 +5151,7 @@ static INT32 DrvFrame()
 		if (i == ((nInterleave/2)-1))	SekSetIRQLine(2, SEK_IRQSTATUS_AUTO);
 		if (i == (nInterleave-1)) 	SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
 
-		BurnTimerUpdate(nTotalCycles[1] / nInterleave);
+		BurnTimerUpdate(i * (nTotalCycles[1] / nInterleave));
 	}
 
 	BurnTimerEndFrame(nTotalCycles[1]);
@@ -5264,7 +5251,7 @@ static INT32 Macross2Frame()
 	ZetNewFrame();
 
 	INT32 nSegment;
-	INT32 nInterleave = 10;
+	INT32 nInterleave = 200;
 	INT32 nTotalCycles[2] = { 10000000 / 56, 4000000 / 56 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -5275,16 +5262,16 @@ static INT32 Macross2Frame()
 	{
 		nSegment = nTotalCycles[0] / nInterleave;
 		nCyclesDone[0] += SekRun(nSegment);
-		if (i == (nInterleave-1) || i == ((nInterleave / 2) - 1)) {
+		if (i == 1 || i == (nInterleave / 2)) {
 			SekSetIRQLine(1, SEK_IRQSTATUS_AUTO);
 		}
 		if (i == (nInterleave-1)) {
-			SekRun(0);
 			SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
 		}
 
 		if (macross2_sound_enable) {
-			BurnTimerUpdate((nSegment * 4) / 10);
+			//BurnTimerUpdate((nSegment * 4) / 10);
+			BurnTimerUpdate(i * (nTotalCycles[1] / nInterleave));
 		}
 	}
 
@@ -5328,6 +5315,7 @@ static INT32 AfegaFrame()
 	}
 
 	INT32 nInterleave = 10;
+	INT32 nSoundBufferPos = 0;
 	INT32 nCyclesTotal[2] = { 12000000 / 56, 4000000 / 56 };
 	INT32 nCyclesDone[2] = { 0, 0 };
 
@@ -5344,12 +5332,26 @@ static INT32 AfegaFrame()
 
 		nSegment = nCyclesTotal[1] / nInterleave;
 		nCyclesDone[1] += ZetRun(nSegment);
+		
+		if (pBurnSoundOut) {
+			INT32 nSegmentLength = nBurnSoundLen / nInterleave;
+			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+			BurnYM2151Render(pSoundBuf, nSegmentLength);
+			MSM6295Render(0, pSoundBuf, nSegmentLength);
+			MSM6295Render(1, pSoundBuf, nSegmentLength);
+			nSoundBufferPos += nSegmentLength;
+		}
 	}
 
 	if (pBurnSoundOut) {
-		BurnYM2151Render(pBurnSoundOut, nBurnSoundLen);
-		MSM6295Render(0,pBurnSoundOut, nBurnSoundLen);
-		MSM6295Render(1,pBurnSoundOut, nBurnSoundLen);
+		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
+		INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
+
+		if (nSegmentLength) {
+			BurnYM2151Render(pSoundBuf, nSegmentLength);
+			MSM6295Render(0, pSoundBuf, nSegmentLength);
+			MSM6295Render(1, pSoundBuf, nSegmentLength);
+		}
 	}
 
 	ZetClose();
@@ -5402,7 +5404,7 @@ static INT32 BjtwinFrame()
 	}
 
 	if (pBurnSoundOut) {
-		memset (pBurnSoundOut, 0, nBurnSoundLen * 4);
+		memset (pBurnSoundOut, 0, nBurnSoundLen * 2 * sizeof(INT16));
 		MSM6295Render(1, pBurnSoundOut, nBurnSoundLen);
 		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
 	}
@@ -5461,7 +5463,7 @@ static INT32 SeibuSoundFrame()
 			SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
 		}
 
-		BurnTimerUpdateYM3812(nCyclesTotal[1] / nInterleave);
+		BurnTimerUpdateYM3812(i * (nCyclesTotal[1] / nInterleave));
 	}
 
 	BurnTimerEndFrameYM3812(nCyclesTotal[1]);
@@ -5500,8 +5502,7 @@ static INT32 NMK004Frame()
 	SekNewFrame();
 
 	INT32 nSegment;
-	INT32 nSoundBufferPos = 0;
-	INT32 nInterleave = nBurnSoundLen ? nBurnSoundLen : 1000;
+	INT32 nInterleave = 200;
 	INT32 nTotalCycles[1] = { nNMK004CpuSpeed / 56 };
 
 	SekOpen(0);
@@ -5522,27 +5523,14 @@ static INT32 NMK004Frame()
 			SekRun(0);
 			SekSetIRQLine(4, SEK_IRQSTATUS_AUTO);
 		}
-
-		if (pBurnSoundOut) {
-			INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2203Update(pSoundBuf, nSegmentLength);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			MSM6295Render(1, pSoundBuf, nSegmentLength);
-			nSoundBufferPos += nSegmentLength;
-		}
 	}
 
 	BurnTimerEndFrame(nTotalCycles[0]);
 
 	if (pBurnSoundOut) {
-		INT32 nSegmentLength = nBurnSoundLen - nSoundBufferPos;
-		if (nSegmentLength) {
-			INT16* pSoundBuf = pBurnSoundOut + (nSoundBufferPos << 1);
-			BurnYM2203Update(pSoundBuf, nSegmentLength);
-			MSM6295Render(0, pSoundBuf, nSegmentLength);
-			MSM6295Render(1, pSoundBuf, nSegmentLength);
-		}
+		BurnYM2203Update(pBurnSoundOut, nBurnSoundLen);
+		MSM6295Render(0, pBurnSoundOut, nBurnSoundLen);
+		MSM6295Render(1, pBurnSoundOut, nBurnSoundLen);
 	}
 
 	SekClose();
@@ -7491,7 +7479,7 @@ static INT32 MustangbInit()
 
 struct BurnDriver BurnDrvMustangb = {
 	"mustangb", "mustang", NULL, NULL, "1990",
-	"US AAF Mustang (bootleg)\0", NULL, "bootleg", "NMK16",
+	"US AAF Mustang (bootleg)\0", "No sound", "bootleg", "NMK16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, mustangbRomInfo, mustangbRomName, NULL, NULL, CommonInputInfo, MustangDIPInfo,
@@ -7569,7 +7557,7 @@ static INT32 Mustangb2Init()
 
 struct BurnDriver BurnDrvMustangb2 = {
 	"mustangb2", "mustang", NULL, NULL, "1990",
-	"US AAF Mustang (TAB Austria bootleg)\0", NULL, "bootleg", "NMK16",
+	"US AAF Mustang (TAB Austria bootleg)\0", "No sound", "bootleg", "NMK16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_HORSHOOT, 0,
 	NULL, mustangb2RomInfo, mustangb2RomName, NULL, NULL, CommonInputInfo, MustangDIPInfo,
@@ -7656,7 +7644,7 @@ static INT32 TdragonInit()
 
 struct BurnDriver BurnDrvTdragon = {
 	"tdragon", NULL, NULL, NULL, "1991",
-	"Thunder Dragon (9th Jan. 1992)\0", NULL, "NMK (Tecmo license)", "NMK16",
+	"Thunder Dragon (9th Jan. 1992)\0", "No sound", "NMK (Tecmo license)", "NMK16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, tdragonRomInfo, tdragonRomName, NULL, NULL, CommonInputInfo, TdragonDIPInfo,
@@ -7757,7 +7745,7 @@ static INT32 TdragonbInit()
 
 struct BurnDriver BurnDrvTdragonb = {
 	"tdragonb", "tdragon", NULL, NULL, "1991",
-	"Thunder Dragon (bootleg)\0", NULL, "bootleg", "NMK16",
+	"Thunder Dragon (bootleg)\0", "No sound", "bootleg", "NMK16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, tdragonbRomInfo, tdragonbRomName, NULL, NULL, CommonInputInfo, TdragonbDIPInfo,
@@ -8837,7 +8825,7 @@ static INT32 RapheroInit()
 
 struct BurnDriver BurnDrvRaphero = {
 	"raphero", NULL, NULL, NULL, "1994",
-	"Rapid Hero\0", NULL, "Media Trading Corp", "NMK16",
+	"Rapid Hero\0", "Incomplete sound", "Media Trading Corp", "NMK16",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_VERSHOOT, 0,
 	NULL, rapheroRomInfo, rapheroRomName, NULL, NULL, Tdragon2InputInfo, RapheroDIPInfo,

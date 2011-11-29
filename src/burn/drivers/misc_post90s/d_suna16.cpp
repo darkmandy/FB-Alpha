@@ -1516,8 +1516,8 @@ static INT32 SunaqInit()
 
 	BurnYM2151Init(3579545, 25.0);
 
-	DACInit(0, 0, 1);
-	DACInit(1, 0, 1);
+	DACInit(0, 0, 2);
+	DACInit(1, 0, 2);
 
 	DrvDoReset();
 

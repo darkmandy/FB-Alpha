@@ -21,7 +21,7 @@ static UINT8 *DrvVidRAM;
 static UINT8 *DrvPxlRAM;
 static UINT8 *DrvZ80RAM;
 
-static UINT32  *DrvPalette;
+static UINT32 *DrvPalette;
 static UINT8 DrvRecalc;
 
 static UINT8 *soundlatch;
@@ -517,7 +517,7 @@ static INT32 DrvInit()
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -605,10 +605,7 @@ static INT32 DrvExit()
 	ZetExit();
 	SekExit();
 	
-	if (AllMem) {
-		free(AllMem);
-		AllMem = NULL;
-	}
+	BurnFree(AllMem);
 
 	return 0;
 }
@@ -809,7 +806,7 @@ static INT32 DrvFrame()
 	SekRun(10000000 / 60);
 	SekSetIRQLine(1, SEK_IRQSTATUS_AUTO);
 	
-	BurnTimerEndFrame((4000000 / 60) - ZetTotalCycles());
+	BurnTimerEndFrame(4000000 / 60);
 
 	if (pBurnSoundOut) {
 		BurnYM2610Update(pBurnSoundOut, nBurnSoundLen);

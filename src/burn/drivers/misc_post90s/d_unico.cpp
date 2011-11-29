@@ -32,7 +32,7 @@ static UINT8 *DrvScrollRam        = NULL;
 static UINT8 *DrvTiles            = NULL;
 static UINT8 *DrvSprites          = NULL;
 static UINT8 *DrvTempRom          = NULL;
-static UINT32  *DrvPalette          = NULL;
+static UINT32 *DrvPalette         = NULL;
 
 static INT32 nCyclesDone[1], nCyclesTotal[1];
 static INT32 nCyclesSegment;
@@ -1034,11 +1034,11 @@ static INT32 BurglarxInit()
 	Mem = NULL;
 	MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	MemIndex();
 
-	DrvTempRom = (UINT8 *)malloc(0x400000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x400000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x000001, 0, 2); if (nRet != 0) return 1;
@@ -1077,10 +1077,7 @@ static INT32 BurglarxInit()
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 18, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
@@ -1126,11 +1123,11 @@ static INT32 ZeropntInit()
 	Mem = NULL;
 	MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	MemIndex();
 
-	DrvTempRom = (UINT8 *)malloc(0x800000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x800000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x000001, 0, 2); if (nRet != 0) return 1;
@@ -1161,10 +1158,7 @@ static INT32 ZeropntInit()
 	nRet = BurnLoadRom(DrvMSM6295ROMSrc + 0x00000, 10, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	// Setup the 68000 emulation
 	SekInit(0, 0x68000);
@@ -1225,11 +1219,11 @@ static INT32 Zeropnt2Init()
 	Mem = NULL;
 	Zeropnt2MemIndex();
 	nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	Zeropnt2MemIndex();
 
-	DrvTempRom = (UINT8 *)malloc(0x1000000);
+	DrvTempRom = (UINT8 *)BurnMalloc(0x1000000);
 
 	// Load 68000 Program Roms
 	nRet = BurnLoadRom(Drv68KRom + 0x000000, 0, 2); if (nRet != 0) return 1;
@@ -1267,10 +1261,7 @@ static INT32 Zeropnt2Init()
 	nRet = BurnLoadRom(MSM6295ROM + 0x100000, 11, 1); if (nRet != 0) return 1;
 	memcpy(MSM6295ROM + 0x000000, DrvMSM6295ROMSrc, 0x40000);
 	
-	if (DrvTempRom) {
-		free(DrvTempRom);
-		DrvTempRom = NULL;
-	}
+	BurnFree(DrvTempRom);
 	
 	// Setup the 68000 emulation
 	SekInit(0, 0x68EC020);
@@ -1331,10 +1322,7 @@ static INT32 DrvExit()
 	
 	UnicoMakeInputsFunction = NULL;
 	
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 
 	return 0;
 }
@@ -1889,7 +1877,7 @@ struct BurnDriver BurnDrvBurglarx = {
 
 struct BurnDriver BurnDrvZeropnt = {
 	"zeropnt", NULL, NULL, NULL, "1998",
-	"Zero PoINT32 (set 1)\0", NULL, "Unico", "Unico",
+	"Zero Point (set 1)\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, ZeropntRomInfo, ZeropntRomName, NULL, NULL, ZeropntInputInfo, ZeropntDIPInfo,
@@ -1899,7 +1887,7 @@ struct BurnDriver BurnDrvZeropnt = {
 
 struct BurnDriver BurnDrvZeropnta = {
 	"zeropnta", "zeropnt", NULL, NULL, "1998",
-	"Zero PoINT32 (set 2)\0", NULL, "Unico", "Unico",
+	"Zero Point (set 2)\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_CLONE, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, ZeropntaRomInfo, ZeropntaRomName, NULL, NULL, ZeropntInputInfo, ZeropntDIPInfo,
@@ -1909,7 +1897,7 @@ struct BurnDriver BurnDrvZeropnta = {
 
 struct BurnDriver BurnDrvZeropnt2 = {
 	"zeropnt2", NULL, NULL, NULL, "1999",
-	"Zero PoINT32 2\0", NULL, "Unico", "Unico",
+	"Zero Point 2\0", NULL, "Unico", "Unico",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_SHOOT, 0,
 	NULL, Zeropnt2RomInfo, Zeropnt2RomName, NULL, NULL, ZeropntInputInfo, Zeropnt2DIPInfo,
