@@ -18,6 +18,7 @@ static UINT8 *RomGfx;
 
 static UINT8 *Ram68K;
 static UINT8 *RamUnknown;
+static UINT8 *RamNV;
 
 static UINT16 *RamSpr;
 static UINT16 *RamSprBak;
@@ -42,6 +43,7 @@ static UINT8 bRecalcPalette = 0;
 static UINT32 gfx_code_mask;
 //static UINT8 bMahjong = 0;
 static UINT8 Mahjong_keyboard = 0;
+static UINT8 HasNVRam;
 
 static INT32 yoffset;
 static INT32 sva_x;
@@ -589,8 +591,8 @@ static struct BurnInputInfo DeerhuntInputList[] = {
 	A("P1 Right / left",	BIT_ANALOG_REL, DrvAxis + 0,	"mouse x-axis"),
 	A("P1 Up / Down",	BIT_ANALOG_REL, DrvAxis + 1,	"mouse y-axis"),
 
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 2"},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"mouse button 1"},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"mouse button 2"},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 fire 3"},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 4"},
 
@@ -742,16 +744,16 @@ static struct BurnInputInfo WschampInputList[] = {
 	A("P1 Right / left",	BIT_ANALOG_REL, DrvAxis + 0,	"mouse x-axis"),
 	A("P1 Up / Down",	BIT_ANALOG_REL, DrvAxis + 1,	"mouse y-axis"),
 
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"p1 fire 1"},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"p1 fire 2"},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 0,	"mouse button 1"},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 1,	"mouse button 2"},
 	{"P1 Button 3",		BIT_DIGITAL,	DrvJoy3 + 6,	"p1 fire 3"},
 	{"P1 Button 4",		BIT_DIGITAL,	DrvJoy2 + 6,	"p1 fire 4"},
 
 	{"P2 Coin",		BIT_DIGITAL,	DrvJoy4 + 1,	"p2 coin"},
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy3 + 7,	"p2 start"},
 
-	A("P2 Right / left",	BIT_ANALOG_REL, DrvAxis + 2,	"mouse x-axis"),
-	A("P2 Up / Down",	BIT_ANALOG_REL, DrvAxis + 3,	"mouse y-axis"),
+	A("P2 Right / left",	BIT_ANALOG_REL, DrvAxis + 2,	"p2 x-axis"),
+	A("P2 Up / Down",	BIT_ANALOG_REL, DrvAxis + 3,	"p2 y-axis"),
 
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p2 fire 1"},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p2 fire 2"},
@@ -1504,12 +1506,13 @@ static INT32 MemIndex(INT32 CodeSize, INT32 GfxSize, INT32 PcmSize, INT32 ExtRam
 
 	Ram68K		= Next; Next += 0x010000;
 	RamUnknown	= Next; Next += ExtRamSize;
-	RamSpr		= (UINT16 *) Next; Next += 0x040000;
-	RamSprBak	= (UINT16 *) Next; Next += 0x040000;
-	RamPal		= (UINT16 *) Next; Next += 0x010000;
-	RamTMP68301	= (UINT16 *) Next; Next += 0x000400;
+	if (HasNVRam) RamNV = Next; Next += 0x10000;
+	RamSpr		= (UINT16 *) Next; Next += 0x020000 * sizeof(UINT16);
+	RamSprBak	= (UINT16 *) Next; Next += 0x020000 * sizeof(UINT16);
+	RamPal		= (UINT16 *) Next; Next += 0x008000 * sizeof(UINT16);
+	RamTMP68301	= (UINT16 *) Next; Next += 0x000200 * sizeof(UINT16);
 
-	RamVReg		= (UINT16 *) Next; Next += 0x000040;
+	RamVReg		= (UINT16 *) Next; Next += 0x000020 * sizeof(UINT16);
 
 	RamEnd		= Next;
 
@@ -1544,7 +1547,7 @@ static INT32 grdiansInit()
 	Mem = NULL;
 	MemIndex(0x0200000, 0x2000000, 0x0200000, 0x00C000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0200000, 0x2000000, 0x0200000, 0x00C000);
 
@@ -1555,7 +1558,7 @@ static INT32 grdiansInit()
 	nRet = BurnLoadRom(Rom68K + 0x100000, 3, 2); if (nRet != 0) return 1;
 
 	// Load Gfx
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0800000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0800000);
 	for (INT32 i=0; i<8; i+=2) {
 		BurnLoadRom(tmpGfx + 0x0200000, i+5, 1);
 		memcpy(tmpGfx + 0x0600000, tmpGfx + 0x0200000, 0x0200000);
@@ -1563,10 +1566,7 @@ static INT32 grdiansInit()
 		loadDecodeGfx( tmpGfx, 0x0800000 / 2, i );
 	}
 
-	if (tmpGfx) {
-		free(tmpGfx);
-		tmpGfx = NULL;
-	}
+	BurnFree(tmpGfx);
 
 	// Leave 1MB empty (addressable by the chip)
 	BurnLoadRom(X1010SNDROM + 0x100000, 12, 1);
@@ -1715,7 +1715,7 @@ static INT32 mj4simaiInit()
 	Mem = NULL;
 	MemIndex(0x0200000, 0x2000000, 0x0500000, 0x000000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0200000, 0x2000000, 0x0500000, 0x000000);
 
@@ -1726,16 +1726,13 @@ static INT32 mj4simaiInit()
 	nRet = BurnLoadRom(Rom68K + 0x100000, 3, 2); if (nRet != 0) return 1;
 
 	// Load Gfx
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0800000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0800000);
 	for (INT32 i=0; i<6; i+=2) {
 		BurnLoadRom(tmpGfx + 0x0000000, i+4, 1);
 		BurnLoadRom(tmpGfx + 0x0400000, i+5, 1);
 		loadDecodeGfx( tmpGfx, 0x0800000 / 2, i );
 	}
-	if (tmpGfx) {
-		free(tmpGfx);
-		tmpGfx = NULL;
-	}
+	BurnFree(tmpGfx);
 
 	// Leave 1MB empty (addressable by the chip)
 	BurnLoadRom(X1010SNDROM + 0x100000, 10, 1);
@@ -1868,7 +1865,7 @@ static INT32 myangelInit()
 	Mem = NULL;
 	MemIndex(0x0200000, 0x1000000, 0x0300000, 0x000000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0200000, 0x1000000, 0x0300000, 0x000000);
 
@@ -1879,16 +1876,13 @@ static INT32 myangelInit()
 	nRet = BurnLoadRom(Rom68K + 0x100000, 3, 2); if (nRet != 0) return 1;
 
 	// Load Gfx
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0400000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0400000);
 	for (INT32 i=0; i<8; i+=2) {
 		BurnLoadRom(tmpGfx + 0x0000000, i+4, 1);
 		BurnLoadRom(tmpGfx + 0x0200000, i+5, 1);
 		loadDecodeGfx( tmpGfx, 0x0400000 / 2, i );
 	}
-	if (tmpGfx) {
-		free(tmpGfx);
-		tmpGfx = NULL;
-	}
+	BurnFree(tmpGfx);
 
 	// Leave 1MB empty (addressable by the chip)
 	BurnLoadRom(X1010SNDROM + 0x100000, 12, 1);
@@ -2019,7 +2013,7 @@ static INT32 myangel2Init()
 	Mem = NULL;
 	MemIndex(0x0200000, 0x1800000, 0x0500000, 0x000000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0200000, 0x1800000, 0x0500000, 0x000000);
 
@@ -2030,16 +2024,13 @@ static INT32 myangel2Init()
 	nRet = BurnLoadRom(Rom68K + 0x100000, 3, 2); if (nRet != 0) return 1;
 
 	// Load Gfx
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0600000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0600000);
 	for (INT32 i = 0; i < 8; i+=2) {
 		BurnLoadRom(tmpGfx + 0x0000000,  i + 4, 1);
 		BurnLoadRom(tmpGfx + 0x0200000,  i + 5, 1);
 		loadDecodeGfx(tmpGfx, 0x0600000 / 2, i);
 	}
-	if (tmpGfx) {
-		free(tmpGfx);
-		tmpGfx = NULL;
-	}
+	BurnFree(tmpGfx);
 
 	// Leave 1MB empty (addressable by the chip)
 	BurnLoadRom(X1010SNDROM + 0x100000, 12, 1);
@@ -2181,7 +2172,7 @@ static INT32 pzlbowlInit()
 	Mem = NULL;
 	MemIndex(0x0100000, 0x1000000, 0x0500000, 0x000000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0100000, 0x1000000, 0x0500000, 0x000000);
 
@@ -2190,15 +2181,12 @@ static INT32 pzlbowlInit()
 	nRet = BurnLoadRom(Rom68K + 0x000000, 1, 2); if (nRet != 0) return 1;
 
 	// Load Gfx
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0400000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0400000);
 	for (INT32 i=0; i<4; i++) {
 		BurnLoadRom(tmpGfx, i+2, 1);
 		loadDecodeGfx( tmpGfx, 0x0400000 / 2, i*2 );
 	}
-	if (tmpGfx) {
-		free(tmpGfx);
-		tmpGfx = NULL;
-	}
+	BurnFree(tmpGfx);
 
 	// Leave 1MB empty (addressable by the chip)
 	BurnLoadRom(X1010SNDROM + 0x100000, 6, 1);
@@ -2328,7 +2316,7 @@ static INT32 penbrosInit()
 	Mem = NULL;
 	MemIndex(0x0100000, 0x1000000, 0x0300000, 0x040000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0100000, 0x1000000, 0x0300000, 0x040000);
 
@@ -2337,15 +2325,12 @@ static INT32 penbrosInit()
 	nRet = BurnLoadRom(Rom68K + 0x000000, 1, 2); if (nRet != 0) return 1;
 
 	// Load Gfx
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0400000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0400000);
 	for (INT32 i=0; i<3; i++) {
 		BurnLoadRom(tmpGfx, i+2, 1);
 		loadDecodeGfx( tmpGfx, 0x0400000 / 2, i*2 );
 	}
-	if (tmpGfx) {
-		free(tmpGfx);
-		tmpGfx = NULL;
-	}
+	BurnFree(tmpGfx);
 
 	// Leave 1MB empty (addressable by the chip)
 	BurnLoadRom(X1010SNDROM + 0x100000, 5, 1);
@@ -2495,7 +2480,7 @@ static INT32 gundamexInit()
 	Mem = NULL;
 	MemIndex(0x0300000, 0x2000000, 0x0300000, 0x010000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);										// blank all memory
 	MemIndex(0x0300000, 0x2000000, 0x0300000, 0x010000);
 
@@ -2506,7 +2491,7 @@ static INT32 gundamexInit()
 	nRet = BurnLoadRom(Rom68K + 0x100000, 3, 2); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(Rom68K + 0x200000, 4, 0); if (nRet != 0) return 1;
 
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0600000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0600000);
 	nRet = BurnLoadRom(tmpGfx + 0x0000000,  5, 1); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(tmpGfx + 0x0200000,  6, 1); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(tmpGfx + 0x0400000,  7, 1); if (nRet != 0) return 1;
@@ -2519,6 +2504,8 @@ static INT32 gundamexInit()
 	nRet = BurnLoadRom(tmpGfx + 0x0200000, 12, 1); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(tmpGfx + 0x0400000, 13, 1); if (nRet != 0) return 1;
 	loadDecodeGfx(tmpGfx, 0x600000 / 2, 4);
+	
+	BurnFree(tmpGfx);
 
 	BurnLoadRom(X1010SNDROM + 0x100000, 14, 1);
 
@@ -2625,11 +2612,13 @@ UINT16 __fastcall samshootReadWord(UINT32 address)
 static INT32 samshootInit()
 {
 	INT32 nRet;
+	
+	HasNVRam = 1;
 
 	Mem = NULL;
 	MemIndex(0x0200000, 0x2000000, 0x0500000, 0x010000);
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((Mem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((Mem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(Mem, 0, nLen);
 	MemIndex(0x0200000, 0x2000000, 0x0500000, 0x010000);
 
@@ -2637,7 +2626,7 @@ static INT32 samshootInit()
 	nRet = BurnLoadRom(Rom68K + 0x000001, 0, 2); if (nRet != 0) return 1;
 	nRet = BurnLoadRom(Rom68K + 0x000000, 1, 2); if (nRet != 0) return 1;
 
-	UINT8 * tmpGfx = (UINT8 *)malloc(0x0800000);
+	UINT8 * tmpGfx = (UINT8 *)BurnMalloc(0x0800000);
 
 	nRet = BurnLoadRom(tmpGfx, 2, 1); if (nRet != 0) return 1;
 	loadDecodeGfx(tmpGfx, 0x800000 / 2, 0);
@@ -2647,6 +2636,8 @@ static INT32 samshootInit()
 	loadDecodeGfx(tmpGfx, 0x800000 / 2, 4);
 	nRet = BurnLoadRom(tmpGfx, 5, 1); if (nRet != 0) return 1;
 	loadDecodeGfx(tmpGfx, 0x800000 / 2, 6);
+	
+	BurnFree(tmpGfx);
 
 	BurnLoadRom(X1010SNDROM + 0x100000, 6, 1);
 
@@ -2658,7 +2649,7 @@ static INT32 samshootInit()
 		SekMapMemory(Rom68K,				0x000000, 0x1FFFFF, SM_ROM);	// CPU 0 ROM
 		SekMapMemory(Ram68K,				0x200000, 0x20FFFF, SM_RAM);	// CPU 0 RAM
 
-		SekMapMemory(RamUnknown + 0x00000,		0x300000, 0x30FFFF, SM_RAM);
+		SekMapMemory(RamNV + 0x00000,		0x300000, 0x30FFFF, SM_RAM);
 
 		SekMapMemory((UINT8 *)RamSpr,		0x800000, 0x83FFFF, SM_RAM);	// sprites
 		SekMapMemory((UINT8 *)RamPal,		0x840000, 0x84FFFF, SM_ROM);	// Palette
@@ -2713,16 +2704,15 @@ static INT32 grdiansExit()
 
 	GenericTilesExit();
 
-	if (Mem) {
-		free(Mem);
-		Mem = NULL;
-	}
+	BurnFree(Mem);
 
 	if (!strcmp(BurnDrvGetTextA(DRV_NAME), "gundamex")) {
 		EEPROMExit();
 	}
 
 	BurnGunExit();
+	
+	HasNVRam = 0;
 
 //	bMahjong = 0;
 
@@ -3204,6 +3194,14 @@ static INT32 grdiansScan(INT32 nAction,INT32 *pnMin)
 		ba.Data	  = RamStart;
 		ba.nLen	  = RamEnd - RamStart;
 		ba.szName = "All Ram";
+		BurnAcb(&ba);
+	}
+	
+	if (nAction & ACB_NVRAM && HasNVRam) {
+		memset(&ba, 0, sizeof(ba));
+		ba.Data = RamNV;
+		ba.nLen = 0x10000;
+		ba.szName = "Backup Ram";
 		BurnAcb(&ba);
 	}
 
