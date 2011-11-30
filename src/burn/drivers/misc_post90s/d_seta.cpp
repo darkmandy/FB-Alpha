@@ -939,8 +939,8 @@ STDINPUTINFO(Metafox)
 static struct BurnInputInfo ZombraidInputList[] = {
 	{"P1 Coin",		BIT_DIGITAL,	DrvJoy3 + 0,	"p1 coin"	},
 	{"P1 Start",		BIT_DIGITAL,	DrvJoy1 + 7,	"p1 start"	},
-	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"p1 fire 1"	},
-	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"p1 fire 2"	},
+	{"P1 Button 1",		BIT_DIGITAL,	DrvJoy1 + 4,	"mouse button 1"	},
+	{"P1 Button 2",		BIT_DIGITAL,	DrvJoy1 + 5,	"mouse button 2"	},
 	A("P1 Right / left",	BIT_ANALOG_REL, DrvAxis + 0,	"mouse x-axis"),
 	A("P1 Up / Down",	BIT_ANALOG_REL, DrvAxis + 1,	"mouse y-axis"),
 
@@ -948,8 +948,8 @@ static struct BurnInputInfo ZombraidInputList[] = {
 	{"P2 Start",		BIT_DIGITAL,	DrvJoy2 + 7,	"p2 start"	},
 	{"P2 Button 1",		BIT_DIGITAL,	DrvJoy2 + 4,	"p2 fire 1"	},
 	{"P2 Button 2",		BIT_DIGITAL,	DrvJoy2 + 5,	"p2 fire 2"	},
-	A("P2 Right / left",	BIT_ANALOG_REL, DrvAxis + 2,	"mouse x-axis"),
-	A("P2 Up / Down",	BIT_ANALOG_REL, DrvAxis + 3,	"mouse y-axis"),
+	A("P2 Right / left",	BIT_ANALOG_REL, DrvAxis + 2,	"p2 x-axis"),
+	A("P2 Up / Down",	BIT_ANALOG_REL, DrvAxis + 3,	"p2 y-axis"),
 
 	{"Reset",		BIT_DIGITAL,	&DrvReset,	"reset"		},
 	{"Service",		BIT_DIGITAL,	DrvJoy3 + 2,	"service"	},
@@ -4829,7 +4829,7 @@ UINT8 __fastcall utoukond_sound_read_port(UINT16 port)
 		case 0x01:
 		case 0x02:
 		case 0x03:
-			return BurnYM3438Read(0, 0);// right?
+			return BurnYM3438Read(0, port & 3);// right?
 
 		case 0xc0:
 			ZetSetIRQLine(0, ZET_IRQSTATUS_NONE);
@@ -5723,7 +5723,7 @@ static void madshark68kInit()
 	SekClose();
 
 	{
-		DrvGfxROM2 = (UINT8*)malloc(0x200000);
+		DrvGfxROM2 = (UINT8*)BurnMalloc(0x200000);
 		DrvROMLen[1] = DrvROMLen[2] = 0x200000;
 
 		memcpy (DrvGfxROM0 + 0x200000, DrvGfxROM0 + 0x000000, 0x100000);
@@ -5821,7 +5821,7 @@ static void zombraid68kInit()
 static void BlandiaGfxRearrange()
 {
 	INT32 rom_size = DrvROMLen[1];
-	UINT8 *buf = (UINT8*)malloc(rom_size);
+	UINT8 *buf = (UINT8*)BurnMalloc(rom_size);
 
 	UINT8 *rom = DrvGfxROM1 + 0x40000;
 
@@ -5847,10 +5847,7 @@ static void BlandiaGfxRearrange()
 
 	DrvROMLen[1] = DrvROMLen[2] = 0xc0000;
 
-	if (buf) {
-		free (buf);
-		buf = NULL;
-	}
+	BurnFree (buf);
 }
 
 static void blandia68kInit()
@@ -5916,7 +5913,7 @@ static void blandiap68kInit()
 
 	// set up sound banks...
 	{
-		UINT8 *tmp = (UINT8*)malloc(0x240000);
+		UINT8 *tmp = (UINT8*)BurnMalloc(0x240000);
 
 		INT32 offsets[16] = {
 			0x000000, 0x140000, 0x020000, 0x160000, 
@@ -5931,10 +5928,7 @@ static void blandiap68kInit()
 
 		memcpy (DrvSndROM, tmp, 0x240000);
 
-		if (tmp) {
-			free (tmp);
-			tmp = NULL;
-		}
+		BurnFree (tmp);
 	}
 }
 
@@ -6417,7 +6411,7 @@ static INT32 DrvGfxDecode(INT32 type, UINT8 *gfx, INT32 num)
 	INT32 YOffs3a[16]= { 0*8, 16*8, 4*8, 20*8,  2*8, 18*8, 6*8, 22*8, 1*8, 17*8, 5*8, 21*8,  3*8, 19*8, 7*8, 23*8 }; // wiggie
 	INT32 YOffs3b[16]= { 0*8, 2*8,  16*8, 18*8,  1*8, 3*8, 17*8, 19*8,  4*8, 6*8, 20*8, 22*8, 5*8, 7*8,21*8, 23*8 }; // superbar
 
-	UINT8 *tmp = (UINT8*)malloc(len);
+	UINT8 *tmp = (UINT8*)BurnMalloc(len);
 	if (tmp == NULL) {
 		return 1;
 	}
@@ -6475,15 +6469,12 @@ static INT32 DrvGfxDecode(INT32 type, UINT8 *gfx, INT32 num)
 		break;
 	}
 	
-	if (tmp) {
-			free (tmp);
-			tmp = NULL;
-		}
+	BurnFree (tmp);
 
 	{
 		INT32 size = DrvGfxMask[num];
 
-		DrvGfxTransMask[num] = (UINT8*)malloc(size);
+		DrvGfxTransMask[num] = (UINT8*)BurnMalloc(size);
 
 		for (INT32 i = 0; i < size << 8; i += (1 << 8)) {
 			DrvGfxTransMask[num][i >> 8] = 1; // transparent
@@ -6722,7 +6713,7 @@ static INT32 DrvInit(void (*p68kInit)(), INT32 cpu_speed, INT32 irq_type, INT32 
 	AllMem = NULL;
 	MemIndex();
 	INT32 nLen = MemEnd - (UINT8 *)0;
-	if ((AllMem = (UINT8 *)malloc(nLen)) == NULL) return 1;
+	if ((AllMem = (UINT8 *)BurnMalloc(nLen)) == NULL) return 1;
 	memset(AllMem, 0, nLen);
 	MemIndex();
 
@@ -6794,28 +6785,16 @@ static INT32 DrvExit()
 	MSM6295Exit(0);
 	MSM6295ROM = NULL;
 
-	if (AllMem) {
-		free (AllMem);
-		AllMem = NULL;
-	}
+	BurnFree (AllMem);
 
 	oisipuzl_hack = 0;
 	twineagle = 0;
 	watchdog_enable = 0;
 	refresh_rate = 6000;
 
-	if (DrvGfxTransMask[0]) {
-		free (DrvGfxTransMask[0]);
-		DrvGfxTransMask[0] = NULL;
-	}
-	if (DrvGfxTransMask[2]) {
-		free (DrvGfxTransMask[2]);
-		DrvGfxTransMask[2] = NULL;
-	}
-	if (DrvGfxTransMask[1]) {
-		free (DrvGfxTransMask[1]);
-		DrvGfxTransMask[1] = NULL;
-	}
+	BurnFree (DrvGfxTransMask[0]);
+	BurnFree (DrvGfxTransMask[2]);
+	BurnFree (DrvGfxTransMask[1]);
 
 	return 0;
 }
@@ -7278,7 +7257,7 @@ static INT32 DrvCommonFrame(void (*pFrameCallback)())
 	}
 
 	{
-		memset (DrvInputs, 0xff, 7 * sizeof(INT16));
+		memset (DrvInputs, 0xff, 7 * sizeof(UINT16));
 		for (INT32 i = 0; i < 16; i++) {
 			DrvInputs[0] ^= (DrvJoy1[i] & 1) << i;
 			DrvInputs[1] ^= (DrvJoy2[i] & 1) << i;
@@ -7291,23 +7270,6 @@ static INT32 DrvCommonFrame(void (*pFrameCallback)())
 	
 		BurnGunMakeInputs(0, (INT16)DrvAxis[0], (INT16)DrvAxis[1]);	// zombraid
 		BurnGunMakeInputs(1, (INT16)DrvAxis[2], (INT16)DrvAxis[3]);
-
-/*		float x0 = ((float)((BurnGunX[0] >> 8) + 8)) / 224 * 100;
-		float y0 = ((float)((BurnGunY[0] >> 8) + 8)) / 224 * 100;
-		float x1 = ((float)((BurnGunX[1] >> 8) + 8)) / 384 * 412;
-		float y1 = ((float)((BurnGunY[1] >> 8) + 8)) / 224 * 224;
-		DrvAnalogInput[0] = (UINT8)x0;
-		DrvAnalogInput[1] = (UINT8)y0;
-
-		DrvAnalogInput[0] -= 0xc0;
-		DrvAnalogInput[0] ^= 0xff;
-		DrvAnalogInput[0] &= 0xff;
-
-		DrvAnalogInput[1] += 0x48;
-		DrvAnalogInput[1] &= 0xff;
-		
-		DrvAnalogInput[2] = ((UINT8)x1)^0xff;
-		DrvAnalogInput[3] = (UINT8)y1;*/
 		
 		float xRatio = (float)128 / 384;
 		float yRatio = (float)96 / 224;
@@ -7324,9 +7286,7 @@ static INT32 DrvCommonFrame(void (*pFrameCallback)())
 		
 			DrvAnalogInput[0 + (i * 2)] = (UINT8)~x;
 			DrvAnalogInput[1 + (i * 2)] = (UINT8)y;
-		}		
-		
-		bprintf(PRINT_NORMAL, _T("%x, %x\n"), DrvAnalogInput[0], DrvAnalogInput[1]);
+		}
 	}
 
 	pFrameCallback();
@@ -7460,6 +7420,8 @@ static void Drv68kZ80YM3438FrameCallback()
 	INT32 nCyclesTotal[2] = { (cpuspeed * 100) / refresh_rate, (4000000 * 100) / refresh_rate };
 	INT32 nCyclesDone[2]  = { 0, 0 };
 
+	ZetNewFrame();
+	
 	SekOpen(0);
 	ZetOpen(0);
 
@@ -7467,7 +7429,7 @@ static void Drv68kZ80YM3438FrameCallback()
 	{
 		nCyclesDone[0] += SekRun(nCyclesTotal[0] / nInterleave);
 	//	nCyclesDone[1] += ZetRun(nCyclesTotal[1] / nInterleave);
-		BurnTimerUpdate(nCyclesTotal[1] / nInterleave);
+		BurnTimerUpdate(i * (nCyclesTotal[1] / nInterleave));
 		irq_generator(i);
 	}
 
@@ -8365,10 +8327,7 @@ static INT32 madsharkInit()
 
 static INT32 madsharkExit()
 {
-	if (DrvGfxROM2) {
-		free (DrvGfxROM2);
-		DrvGfxROM2 = NULL;
-	}
+	BurnFree (DrvGfxROM2);
 
 	return DrvExit();
 }
@@ -9179,11 +9138,11 @@ static INT32 krzybowlInit()
 	return DrvInit(krzybowl68kInit, 16000000, SET_IRQLINES(1, 2), NO_SPRITE_BUFFER, SET_GFX_DECODE(0, -1, -1));
 }
 
-struct BurnDriver BurnDrvKrzybowl = {
+struct BurnDriverD BurnDrvKrzybowl = {
 	"krzybowl", NULL, NULL, NULL, "1994",
 	"Krazy Bowl\0", NULL, "American Sammy", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
+	BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
 	NULL, krzybowlRomInfo, krzybowlRomName, NULL, NULL, KrzybowlInputInfo, KrzybowlDIPInfo,
 	krzybowlInit, DrvExit, DrvFrame, setaNoLayersDraw, DrvScan, &DrvRecalc, 0x200,
 	240, 320, 3, 4
@@ -9346,7 +9305,7 @@ struct BurnDriver BurnDrvDowntown = {
 	"downtown", NULL, NULL, NULL, "1989",
 	"DownTown / Mokugeki (Set 1)\0", "No sound, imperfect inputs", "Seta", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, downtownRomInfo, downtownRomName, NULL, NULL, DowntownInputInfo, DowntownDIPInfo,
 	downtownInit, DrvExit, DrvFrame, seta1layerDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 384, 3, 4
@@ -9377,11 +9336,11 @@ static struct BurnRomInfo downtown2RomDesc[] = {
 STD_ROM_PICK(downtown2)
 STD_ROM_FN(downtown2)
 
-struct BurnDriver BurnDrvDowntown2 = {
+struct BurnDriverD BurnDrvDowntown2 = {
 	"downtown2", "downtown", NULL, NULL, "1989",
 	"DownTown / Mokugeki (Set 2)\0", "No sound, imperfect inputs", "Seta", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, downtown2RomInfo, downtown2RomName, NULL, NULL, DowntownInputInfo, DowntownDIPInfo,
 	downtownInit, DrvExit, DrvFrame, seta1layerDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 384, 3, 4
@@ -9447,11 +9406,11 @@ static struct BurnRomInfo downtownpRomDesc[] = {
 STD_ROM_PICK(downtownp)
 STD_ROM_FN(downtownp)
 
-struct BurnDriver BurnDrvDowntownp = {
+struct BurnDriverD BurnDrvDowntownp = {
 	"downtownp", "downtown", NULL, NULL, "1989",
 	"DownTown / Mokugeki (prototype)\0", "No sound, imperfect inputs", "Seta", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, downtownpRomInfo, downtownpRomName, NULL, NULL, DowntownInputInfo, DowntownDIPInfo,
 	downtownInit, DrvExit, DrvFrame, seta1layerDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 384, 3, 4
@@ -9489,11 +9448,11 @@ static INT32 tndrcadeInit()
 	return DrvInit(tndrcade68kInit, 8000000, SET_IRQLINES(2, NOIRQ2), NO_SPRITE_BUFFER, SET_GFX_DECODE(0, -1, -1));
 }
 
-struct BurnDriver BurnDrvTndrcade = {
+struct BurnDriverD BurnDrvTndrcade = {
 	"tndrcade", NULL, NULL, NULL, "1987",
 	"Thundercade / Twin Formation\0", "No sound, imperfect inputs", "[Seta] (Taito license)", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, tndrcadeRomInfo, tndrcadeRomName, NULL, NULL, TndrcadeInputInfo, TndrcadeDIPInfo,
 	tndrcadeInit, DrvExit, DrvFrame /*DrvM65c02Frame*/, setaNoLayersDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 384, 3, 4
@@ -9523,11 +9482,11 @@ static struct BurnRomInfo tndrcadejRomDesc[] = {
 STD_ROM_PICK(tndrcadej)
 STD_ROM_FN(tndrcadej)
 
-struct BurnDriver BurnDrvTndrcadej = {
+struct BurnDriverD BurnDrvTndrcadej = {
 	"tndrcadej", "tndrcade", NULL, NULL, "1987",
 	"Tokusyu Butai U.A.G. (Japan)\0", "No sound, imperfect inputs", "[Seta] (Taito license)", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_CLONE | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, tndrcadejRomInfo, tndrcadejRomName, NULL, NULL, TndrcadeInputInfo, TndrcadjDIPInfo,
 	tndrcadeInit, DrvExit, DrvFrame /*DrvM65c02Frame*/, setaNoLayersDraw, DrvScan, &DrvRecalc, 0x200,
 	224, 384, 3, 4
@@ -9655,11 +9614,11 @@ static INT32 kiwameInit()
 	return DrvInit(kiwame68kInit, 16000000, SET_IRQLINES(1, NOIRQ2), NO_SPRITE_BUFFER, SET_GFX_DECODE(0, 1, -1));
 }
 
-struct BurnDriver BurnDrvKiwame = {
+struct BurnDriverD BurnDrvKiwame = {
 	"kiwame", NULL, NULL, NULL, "1994",
 	"Pro Mahjong Kiwame\0", NULL, "Athena", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
+	0, 2, HARDWARE_MISC_POST90S, GBF_MISC, 0,
 	NULL, kiwameRomInfo, kiwameRomName, NULL, NULL, KiwameInputInfo, KiwameDIPInfo,
 	kiwameInit, DrvExit, DrvFrame, setaNoLayersDraw, DrvScan, &DrvRecalc, 0x200,
 	448, 240, 4, 3
@@ -9702,7 +9661,7 @@ static INT32 twineaglInit()
 
 struct BurnDriver BurnDrvTwineagl = {
 	"twineagl", NULL, NULL, NULL, "1988",
-	"Twin Eagle - Revenge Joe's Brother\0", "No sound, imperfect inputs", "Seta (Taito license)", "Seta",
+	"Twin Eagle - Revenge Joe's Brother\0", "Imperfect inputs", "Seta (Taito license)", "Seta",
 	NULL, NULL, NULL, NULL,
 	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, twineaglRomInfo, twineaglRomName, NULL, NULL, TwineaglInputInfo, TwineaglDIPInfo,
@@ -9763,11 +9722,11 @@ static INT32 usclssicInit()
 	return nRet;
 }
 
-struct BurnDriver BurnDrvUsclssic = {
+struct BurnDriverD BurnDrvUsclssic = {
 	"usclssic", NULL, NULL, NULL, "1989",
 	"U.S. Classic\0", "No sound, imperfect inputs", "Seta", "Seta",
 	NULL, NULL, NULL, NULL,
-	BDF_GAME_WORKING | BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
+	BDF_ORIENTATION_VERTICAL, 2, HARDWARE_MISC_PRE90S, GBF_MISC, 0,
 	NULL, usclssicRomInfo, usclssicRomName, NULL, NULL, UsclssicInputInfo, UsclssicDIPInfo,
 	usclssicInit, DrvExit, Drv5IRQFrame, seta1layerDraw, DrvScan, &DrvRecalc, 0xa00,
 	240, 384, 3, 4
